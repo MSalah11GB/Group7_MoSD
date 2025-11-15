@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import { User } from 'src/models/userModel.js'; 
-import Song from 'src/models/songModel.js';
-import Artist from 'src/models/artistModel.js';
-import Album from 'src/models/albumModel.js';
-import Genre from 'src/models/genreModel.js';
-import Playlist from 'src/models/playlistModel.js';
+import { User } from '../src/models/userModel.js'; 
+import Song from '../src/models/songModel.js';
+import Artist from '../src/models/artistModel.js';
+import Album from '../src/models/albumModel.js';
+import Genre from '../src/models/genreModel.js';
+import Playlist from '../src/models/playlistModel.js';
 
 describe('Database Model Relationships', () => {
     beforeAll(async () => {
