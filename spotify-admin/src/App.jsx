@@ -1,34 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react'
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { Routes, Route} from 'react-router-dom';
+import AddSong from './pages/AddSong';
+import AddAlbum from './pages/AddAlbum';
+import AddArtist from './pages/AddArtist';
+import AddGenre from './pages/AddGenre';
+import EditAlbum from './pages/EditAlbum';
+import EditArtist from './pages/EditArtist';
+import ListSong from './pages/ListSong';
+import ListAlbum from './pages/ListAlbum';
+import ListArtist from './pages/ListArtist';
+import ListGenre from './pages/ListGenre';
+import EditSong from './pages/EditSong';
+import SideBar from './components/SideBar';
+import Navbar from './components/Navbar';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+const App = () => {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className='flex items-start min-h-screen'>
+      <ToastContainer/>
+      <SideBar/>
+      <div className='flex-1 h-screen overflow-y-auto bg-[#F3FFF7]'>
+        <Navbar/>
+        <div className='pt-8 pl-5 sm:pt-12 sm:pl-12'>
+          <Routes>
+            <Route path='/add-song' element={<AddSong/>} />
+            <Route path='/add-album' element={<AddAlbum/>} />
+            <Route path='/add-artist' element={<AddArtist/>} />
+            <Route path='/add-genre' element={<AddGenre/>} />
+
+             <Route path="/list-song" element={<ListSong />} />
+            <Route path="/list-album" element={<ListAlbum />} />
+            <Route path="/list-artist" element={<ListArtist />} />
+            <Route path="/list-genre" element={<ListGenre />} />
+
+            <Route path="/edit-song/:id" element={<EditSong />} />
+            <Route path="/edit-album/:id" element={<EditAlbum />} />
+            <Route path="/edit-artist/:id" element={<EditArtist />} />
+          </Routes>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
