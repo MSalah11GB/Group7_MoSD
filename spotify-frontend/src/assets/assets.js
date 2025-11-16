@@ -16,6 +16,8 @@ import queue_icon from './queue.png'
 import volume_icon from './volume.png'
 import img1 from './img1.jpg'
 import song1 from  './song1.mp3'
+import arrow_right from './right_arrow.png'
+import arrow_left from './left_arrow.png'
 
 export const assets = {
     home_icon,
@@ -34,6 +36,8 @@ export const assets = {
     mini_player_icon,
     volume_icon,
     queue_icon,
+    arrow_left,
+    arrow_right,
 }
 
 export const songsData = [

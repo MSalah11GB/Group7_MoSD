@@ -1,4 +1,3 @@
-import React from 'react'
 import DisplayHome from './DisplayHome'
 import {Routes, Route} from 'react-router-dom'
 

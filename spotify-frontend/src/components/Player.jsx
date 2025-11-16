@@ -1,7 +1,7 @@
 // Musicify-frontend/src/components/Player.jsx
 import React, { useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { assets, songsData } from '../assets/assets'; 
-import { PlayerContext } from '../context/PlayerContext';
+//import { PlayerContext } from '../context/PlayerContext';
 
 const Player = () => {
     return (

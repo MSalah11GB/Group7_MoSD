@@ -1,4 +1,4 @@
-import { assets } from '../assets/frontend-assets/assets';
+import { assets } from '../assets/assets';
 
 const Sidebar = () => {
   return (
