@@ -1,0 +1,38 @@
+name: Database Schema Validation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-schemas:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:5
+        ports:
+          - 27017:27017
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: spotify-backend/package-lock.json
+
+    - name: Install Dependencies
+      working-directory: ./spotify-backend
+      run: npm ci
+
+    - name: Run Schema Tests
+      working-directory: ./spotify-backend
+      env:
+        MONGODB_URI: mongodb://localhost:27017/test_db
+      run: npm test
