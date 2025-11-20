@@ -11,11 +11,6 @@ const songSchema = new mongoose.Schema({
     lrcFile: {type: String, default: ""}, // URL to the LRC file
     genres: [{type: mongoose.Schema.Types.ObjectId, ref: 'genre'}], // Array of genre IDs
     youtubeId: {type: String, default: ""}, // YouTube video ID for the song
-    fingerprints: [{ // Audio fingerprints for song recognition
-        timeOffset: {type: Number},
-        frequencies: [{type: Number}],
-        amplitudes: [{type: Number}]
-    }]
 });
 
 const songModel = mongoose.models.song || mongoose.model("song", songSchema);
