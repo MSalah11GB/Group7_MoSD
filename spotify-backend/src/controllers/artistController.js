@@ -10,7 +10,7 @@ import songModel from '../models/songModel.js'
  */
 const normalizeArtistName = (name) => {
     if (!name) return '';
-    return name.toLowerCase().trim();
+    return name.toLowerCase().trim(); 
 };
 
 const addArtist = async (req, res) => {
