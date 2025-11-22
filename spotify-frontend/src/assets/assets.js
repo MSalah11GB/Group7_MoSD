@@ -2,6 +2,7 @@ import home_icon from './home.png'
 import loop_icon from './loop.png'
 import mic_icon from './mic.png'
 import next_icon from './next.png'
+import pause_icon from './pause.png'
 import play_icon from './play.png'
 import plays_icon from './plays.png'
 import prev_icon from './prev.png'
@@ -41,6 +42,7 @@ export const assets = {
     loop_icon,
     mic_icon,
     next_icon,
+    pause_icon,
     play_icon,
     plays_icon,
     prev_icon,
@@ -57,6 +59,20 @@ export const assets = {
     queue_icon,
     arrow_left,
     arrow_right,
+    img1,
+    img2,
+    img3,
+    img4,
+    img5,
+    img7,
+    img8,
+    img9,
+    img10,
+    img11,
+    img12,
+    img14,
+    img15,
+    img16
 }
 
 export const albumsData = [
