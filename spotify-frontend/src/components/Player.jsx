@@ -1,6 +1,6 @@
 // Musicify-frontend/src/components/Player.jsx
-import React, { useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { assets, songsData } from '../assets/assets'; 
+import React, { useContext } from 'react';
+import { assets } from '../assets/assets'; 
 import { PlayerContext } from '../context/PlayerContext';
 
 const Player = () => {
@@ -9,18 +9,18 @@ const Player = () => {
         seekSong, toggleLoop, isLooping, isShuffle, toggleShuffle, volume, handleVolumeChange,
         isMuted, toggleMute } = useContext(PlayerContext)
 
-    return (
+    return track ? (
         <div className='h-[10%] bg-black flex justify-between items-center text-white px-4'>
             <div className='hidden lg:flex items-center gap-4'>
                 <img className='w-12' src={track.image} alt="song img" />
                 <div>
                     <p>{track.name}</p>
-                    <p>{track.desc.slice(0,12)}</p>
+                    <p>{track.artistName || track.artist}</p>
                 </div>
             </div>
             <div className='flex flex-col items-center gap-1 m-auto'>
                 <div className='flex gap-4'>
-                    <img className='w-4 cursor-pointer' src={assets.shuffle_icon} alt="Shuffle" />
+                    <img onClick = {toggleShuffle} className='w-4 cursor-pointer' src={assets.shuffle_icon} alt="Shuffle" />
                     <img onClick = {previousSong} className='w-4 cursor-pointer' src={assets.prev_icon} alt="Previous" />
                     {!playStatus ? (
                         <img onClick={play} className='w-4 cursor-pointer' src={assets.play_icon} alt="play_icon" />
@@ -80,7 +80,7 @@ const Player = () => {
                 />
             </div>
         </div>
-    )
+    ) : null
 };
 
 export default Player;

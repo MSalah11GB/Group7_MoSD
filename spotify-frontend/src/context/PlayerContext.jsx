@@ -1,18 +1,18 @@
 import { createContext, useEffect, useRef, useState } from "react";
 import axios from 'axios';
-import { songsData } from "../assets/assets"; //remove later
+//import { songsData } from "../assets/assets"; //remove later
 
 export const PlayerContext = createContext();
 
 const PlayerContextProvider = (props) => {
 
-    const url = 'http://localhost:3000';
+    const url = 'http://localhost:4000';
 
     const audioRef = useRef();
     const seekBar = useRef();
     const seekBg = useRef();
 
-    //const [songsData, setSongsData] = useState([]);
+    const [songsData, setSongsData] = useState([]);
     const [albumsData, setAlbumsData] = useState([]);
     const [track, setTrack] = useState(songsData[0]);
     const [playStatus, setPlayStatus] = useState(false);
@@ -95,7 +95,7 @@ const PlayerContextProvider = (props) => {
         }
     }, [isLooping]);
 
-    /*const shuffleSongs = () => {
+    const shuffleSongs = () => {
         const shuffledSongs = [...songsData];
         for (let i = shuffledSongs.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -110,7 +110,7 @@ const PlayerContextProvider = (props) => {
         } else {
             setSongsData(originalSongsData);
         }
-    }, [isShuffle, originalSongsData]);*/
+    }, [isShuffle, originalSongsData]);
 
     const playWithId = async (id) => {
         await songsData.map((item) => {
