@@ -1,56 +1,77 @@
-import { createContext, useEffect, useRef, useState } from "react";
+import { createContext, useEffect, useRef, useState, useCallback } from "react";
 import axios from 'axios';
-//import { songsData } from "../assets/assets"; //remove later
 
 export const PlayerContext = createContext();
 
+const LOOP_MODE = {
+    NO_LOOP: 0, // Song plays once, then stops
+    LOOP_ONE: 1, // Song plays twice, then stops
+    LOOP_ALL: 2  // Song loops indefinitely
+};
+
 const PlayerContextProvider = (props) => {
-
     const url = 'http://localhost:4000';
-
     const audioRef = useRef();
     const seekBar = useRef();
     const seekBg = useRef();
-
     const [songsData, setSongsData] = useState([]);
     const [albumsData, setAlbumsData] = useState([]);
     const [track, setTrack] = useState(songsData[0]);
     const [playStatus, setPlayStatus] = useState(false);
-    const [isLooping, setIsLooping] = useState(false);
-    const [originalSongsData, setOriginalSongsData] = useState([]);
-    const [isShuffle, setIsShuffle] = useState(false);
+    const [loopMode, setLoopMode] = useState(LOOP_MODE.NO_LOOP);
+    const [loopCount, setLoopCount] = useState(0);
+    const [shuffleMode, setShuffleMode] = useState(false);
     const [volume, setVolume] = useState(0.5);
     const [isMuted, setIsMuted] = useState(false);
+    const [previousVolume, setPreviousVolume] = useState(1);
     const [time, setTime] = useState({
-        currentTime: {
-            second: 0,
-            minute: 0
-        },
-        totalTime: {
-            second: 0,
-            minute: 0
-        }
+        currentTime: { second: 0, minute: 0 },
+        totalTime: { second: 0, minute: 0 }
     });
-
-    const handleVolumeChange = (e) => {
-        const vol = parseFloat(e.target.value);
-        setVolume(vol);
-        console.log('vol', vol)
-        if (audioRef.current) {
-            audioRef.current.volume = vol;
+    const [playOnLoad, setPlayOnLoad] = useState(false);
+    useEffect(() => {
+        // Initialize audio element properties when component mounts
+        const audio = audioRef.current;
+        if (audio) {
+            audio.volume = volume;
+            audio.muted = isMuted;
         }
-    };
+    }, []);
 
-    const toggleMute = () => {
-        setIsMuted(!isMuted);
-        if (!isMuted) {
-            audioRef.current.volume = 0;
-            setVolume(0);
-        } else {
-            audioRef.current.volume = 0.5;
-            setVolume(0.5);
+    const changeVolume = useCallback((newVolumeLevel) => {
+        if (!audioRef.current) return;
+
+        let newVolume = parseFloat(newVolumeLevel);
+        newVolume = Math.max(0, Math.min(1, newVolume)); // Clamp between 0 and 1
+
+        setVolume(newVolume);
+        audioRef.current.volume = newVolume;
+
+        if (newVolume > 0 && audioRef.current.muted) { // If volume is adjusted to be > 0, unmute the player
+            audioRef.current.muted = false;
+            setIsMuted(false);
         }
-    };
+    }, [setIsMuted]);
+
+    const toggleMute = useCallback(() => {
+        if (!audioRef.current) return;
+
+        const newMutedStatus = !audioRef.current.muted;
+        audioRef.current.muted = newMutedStatus;
+        setIsMuted(newMutedStatus);
+
+        if (newMutedStatus) { // Just muted
+            setPreviousVolume(volume); // Store current volume before muting
+        } else { // Just unmuted
+            // If volume was 0 when unmuting, restore to previousVolume or a default
+            if (volume === 0) {
+                const volumeToRestore = previousVolume > 0 ? previousVolume : 0.5;
+                setVolume(volumeToRestore);
+                audioRef.current.volume = volumeToRestore;
+            }
+            // If volume > 0, it's already set by the slider/changeVolume, no need to change here.
+        }
+    }, [volume, previousVolume, setIsMuted, setVolume]);
 
     useEffect(() => {
         setTimeout(() => {
@@ -68,12 +89,18 @@ const PlayerContextProvider = (props) => {
                 })
             }
         }, 1000)
-
     }, [audioRef])
 
-    const play = () => {
-        audioRef.current.play();
-        setPlayStatus(true);
+    const play = async () => {
+        if (audioRef.current && audioRef.current.src && audioRef.current.paused) {
+            try {
+                await audioRef.current.play();
+                setPlayStatus(true);
+            } catch (error) {
+                console.error("Error in play function:", error);
+                setPlayStatus(false);
+            }
+        }
     }
 
     const pause = () => {
@@ -81,65 +108,54 @@ const PlayerContextProvider = (props) => {
         setPlayStatus(false);
     }
 
-    const toggleLoop = () => {
-        setIsLooping(!isLooping);
+    const toggleLoopMode = () => {
+        setLoopMode(prevMode => {
+            const nextMode = (prevMode + 1) % 3; // Cycle through 0, 1, 2
+            if (nextMode !== LOOP_MODE.LOOP_ONE) { // Reset loopCount if not entering LOOP_ONE
+                setLoopCount(0);
+            }
+            return nextMode;
+        });
     };
 
-    const toggleShuffle = () => {
-        setIsShuffle(!isShuffle);
+    const toggleShuffleMode = () => {
+        setShuffleMode(prev => !prev);
     }
-
-    useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.loop = isLooping;
-        }
-    }, [isLooping]);
-
-    const shuffleSongs = () => {
-        const shuffledSongs = [...songsData];
-        for (let i = shuffledSongs.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledSongs[i], shuffledSongs[j]] = [shuffledSongs[j], shuffledSongs[i]];
-        }
-        setSongsData(shuffledSongs);
-    }
-
-    useEffect(() => {
-        if (isShuffle) {
-            shuffleSongs();
-        } else {
-            setSongsData(originalSongsData);
-        }
-    }, [isShuffle, originalSongsData]);
 
     const playWithId = async (id) => {
-        await songsData.map((item) => {
-            if (id === item._id) {
-                setTrack(item);
+        const selectedTrack = songsData.find(item => item._id === id);
+        if (selectedTrack) {
+            if (track && track._id === selectedTrack._id && !audioRef.current.paused) {
+            } else if (track && track._id === selectedTrack._id && audioRef.current.paused) {
+                await play();
+            } else {
+                setTrack(selectedTrack);
+                setPlayOnLoad(true); 
+                setLoopCount(0); 
             }
-        })
-        await audioRef.current.play();
-        setPlayStatus(true);
+        }
     }
 
     const previousSong = async () => {
-        songsData.map(async (item, index) => {
-            if (track._id === item._id && index > 0) {
-                await setTrack(songsData[index - 1]);
-                await audioRef.current.play();
-                setPlayStatus(true);
-            }
-        })
+        const currentIndex = findCurrentTrackIndex();
+        if (currentIndex > 0) {
+            setTrack(songsData[currentIndex - 1]);
+            setPlayOnLoad(true);
+            setLoopCount(0);
+        }
     }
 
     const nextSong = async () => {
-        songsData.map(async (item, index) => {
-            if (track._id === item._id && index < songsData.length - 1) {
-                await setTrack(songsData[index + 1]);
-                await audioRef.current.play();
-                setPlayStatus(true);
-            }
-        })
+        const currentIndex = findCurrentTrackIndex();
+        if (currentIndex < songsData.length - 1) {
+            setTrack(songsData[currentIndex + 1]);
+            setPlayOnLoad(true);
+            setLoopCount(0);
+        } else if (loopMode === LOOP_MODE.LOOP_ALL && songsData.length > 0) { // Loop back to first song if LOOP_ALL
+            setTrack(songsData[0]);
+            setPlayOnLoad(true);
+            setLoopCount(0);
+        }
     }
 
     const seekSong = async (e) => {
@@ -151,7 +167,6 @@ const PlayerContextProvider = (props) => {
             const response = await axios.get(`${url}/api/song/list`);
             setSongsData(response.data.songs);
             setTrack(response.data.songs[0]);
-            setOriginalSongsData(response.data.songs);
         } catch (error) {
             console.log('error getSongsData', error);
         }
@@ -171,6 +186,122 @@ const PlayerContextProvider = (props) => {
         getSongsData();
     }, [])
 
+    const playRandomSong = async () => {
+        if (songsData.length <= 1) return;
+        
+        const currentIndex = findCurrentTrackIndex();
+        let randomIndex;
+        do {
+            randomIndex = Math.floor(Math.random() * songsData.length);
+        } while (randomIndex === currentIndex);
+        
+        setTrack(songsData[randomIndex]);
+        setPlayOnLoad(true);
+    }
+
+    // Effect to handle track changes: update src, load, and play if intended
+    useEffect(() => {
+        if (track && track.file) { // track.file should be the audio URL
+            const audio = audioRef.current;
+            const handleLoadedMetadata = () => {
+                setTime(prev => ({
+                    ...prev,
+                    totalTime: {
+                        second: Math.floor(audio.duration % 60),
+                        minute: Math.floor(audio.duration / 60)
+                    }
+                }));
+            };
+
+            // Event listener for time updates
+            const handleTimeUpdate = () => {
+                if (seekBar.current) { // Ensure seekBar ref is available
+                    seekBar.current.style.width = (Math.floor(audio.currentTime / audio.duration * 100)) + '%';
+                }
+                setTime(prev => ({
+                    ...prev,
+                    currentTime: {
+                        second: Math.floor(audio.currentTime % 60),
+                        minute: Math.floor(audio.currentTime / 60)
+                    }
+                }));
+            };
+            
+            // Event listener for when the song ends
+            const handleSongEnd = async () => {
+                switch (loopMode) {
+                    case LOOP_MODE.LOOP_ONE:
+                        if (loopCount < 1) { // Play once more (total 2 times)
+                            setLoopCount(prev => prev + 1);
+                            audio.currentTime = 0;
+                            await play();
+                        } else {
+                            setPlayStatus(false);
+                            setLoopCount(0); // Reset for next time
+                        }
+                        break;
+                    case LOOP_MODE.LOOP_ALL:
+                        audio.currentTime = 0;
+                        await play();
+                        break;
+                    case LOOP_MODE.NO_LOOP:
+                    default:
+                        setPlayStatus(false);
+                        setActiveLyricIndex(-1);
+                        if (hasNext) {
+                            if (shuffleMode) await playRandomSong();
+                            else await next();
+                        }
+                        break;
+                }
+            };
+
+            const handleCanPlay = async () => {
+                if (playOnLoad) {
+                    try {
+                        await audio.play();
+                        setPlayStatus(true);
+                        setPlayOnLoad(false); // Reset the flag
+                    } catch (error) {
+                        console.error("Error playing audio in handleCanPlay:", error);
+                        setPlayStatus(false); // Ensure UI reflects paused state on error
+                        setPlayOnLoad(false);
+                    }
+                }
+            };
+            
+            // Clean up previous event listeners before adding new ones
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('ended', handleSongEnd);
+            audio.removeEventListener('canplaythrough', handleCanPlay); // or 'canplay'
+
+            // Set new source and load
+            if (audio.src !== track.file) { // Only update if src is different
+                audio.src = track.file;
+                audio.load(); // Important: load the new source
+            }
+
+            // Add event listeners
+            audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+            audio.addEventListener('timeupdate', handleTimeUpdate);
+            audio.addEventListener('ended', handleSongEnd);
+            audio.addEventListener('canplaythrough', handleCanPlay); // or 'canplay'
+
+            if (playOnLoad && audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+                 handleCanPlay();
+            }
+
+            // Cleanup function for when the component unmounts or track changes again
+            return () => {
+                audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                audio.removeEventListener('timeupdate', handleTimeUpdate);
+                audio.removeEventListener('ended', handleSongEnd);
+                audio.removeEventListener('canplaythrough', handleCanPlay);
+            };
+        }
+    }, [track, playOnLoad, loopMode, loopCount, volume, isMuted]); // Rerun when track or playOnLoad changes
+
     const contextValue = {
         audioRef,
         seekBar,
@@ -180,12 +311,11 @@ const PlayerContextProvider = (props) => {
         time, setTime,
         play, pause,
         playWithId,
-        previousSong, nextSong,
-        seekSong,
+        previousSong, nextSong, seekSong,
         songsData, albumsData,
-        isLooping, toggleLoop,
-        isShuffle, toggleShuffle,
-        volume, handleVolumeChange,
+        loopMode, toggleLoopMode, LOOP_MODE,
+        shuffleMode, toggleShuffleMode,
+        volume, changeVolume,
         isMuted, toggleMute
     }
 
