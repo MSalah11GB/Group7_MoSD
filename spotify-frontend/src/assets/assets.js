@@ -1,6 +1,9 @@
 import home_icon from './home.png'
 import loop_icon from './loop.png'
+import loop1_icon from './loop1.png'
+import loopall_icon from './loopall.png'
 import mic_icon from './mic.png'
+import mute_icon from './mute.png'
 import next_icon from './next.png'
 import pause_icon from './pause.png'
 import play_icon from './play.png'
@@ -40,7 +43,10 @@ import song3 from  './song3.mp3'
 export const assets = {
     home_icon,
     loop_icon,
+    loop1_icon,
+    loopall_icon,
     mic_icon,
+    mute_icon,
     next_icon,
     pause_icon,
     play_icon,

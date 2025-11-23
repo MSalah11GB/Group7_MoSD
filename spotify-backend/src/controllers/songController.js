@@ -230,41 +230,41 @@ const removeSong = async (req, res) => {
 
 const updateSong = async (req, res) => {
     try {
-            const song = new songModel(songData);
-            const savedSong = await song.save({ session });
+        const song = new songModel(songData);
+        const savedSong = await song.save({ session });
 
-            // Use songData.genres instead of genres
-            if (songData.genres?.length > 0) {
-                // Update genres
-                await Promise.all(songData.genres.map(genreId =>
-                    genreModel.findByIdAndUpdate(
-                        genreId,
-                        {
-                            $addToSet: { songList: savedSong._id },
-                            $inc: { songCount: 1 }
-                        },
-                        { session, new: true }
-                    )
-                ));
+        // Use songData.genres instead of genres
+        if (songData.genres?.length > 0) {
+            // Update genres
+            await Promise.all(songData.genres.map(genreId =>
+                genreModel.findByIdAndUpdate(
+                    genreId,
+                    {
+                        $addToSet: { songList: savedSong._id },
+                        $inc: { songCount: 1 }
+                    },
+                    { session, new: true }
+                )
+            ));
 
-                // Update artists' genres
-                if (songData.artist?.length > 0) {
-                    await Promise.all(songData.artist.map(async artistId => {
-                        const artist = await artistModel.findById(artistId).session(session);
-                        if (artist) {
-                            const uniqueGenres = new Set([
-                                ...(artist.genres || []).map(g => g.toString()),
-                                ...songData.genres
-                            ]);
-                            await artistModel.findByIdAndUpdate(
-                                artistId,
-                                { genres: Array.from(uniqueGenres) },
-                                { session, new: true }
-                            );
-                        }
-                    }));
-                }
+            // Update artists' genres
+            if (songData.artist?.length > 0) {
+                await Promise.all(songData.artist.map(async artistId => {
+                    const artist = await artistModel.findById(artistId).session(session);
+                    if (artist) {
+                        const uniqueGenres = new Set([
+                            ...(artist.genres || []).map(g => g.toString()),
+                            ...songData.genres
+                        ]);
+                        await artistModel.findByIdAndUpdate(
+                            artistId,
+                            { genres: Array.from(uniqueGenres) },
+                            { session, new: true }
+                        );
+                    }
+                }));
             }
+        }
 
         // Clean up temp file if it exists (from Spotify/YouTube download)
         if (tempFilePath) {
