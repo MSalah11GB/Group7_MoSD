@@ -1,6 +1,7 @@
 import React from 'react'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
+import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/clerk-react"
 const Navbar = () => {
     const navigate = useNavigate()
     return (
@@ -9,6 +10,26 @@ const Navbar = () => {
                 <div className='flex items-center gap-2'>
                     <img onClick={()=>navigate(-1)} className='w-8 bg-black p-1.5 rounded-2xl cursor-pointer hover:bg-gray-800 transition-colors' src={assets.arrow_left} alt="arrow_left" />
                     <img onClick={()=>navigate(1)} className='w-8 bg-black p-1.5 rounded-2xl cursor-pointer hover:bg-gray-800 transition-colors' src={assets.arrow_right} alt="arrow_right" />
+                </div>
+                <div className='flex items-center gap-4'>
+                    <p className='bg-white text-black text-[15px] px-4 py-1 rounded-2xl hidden md:block'>Shazam</p>
+                    <SignedOut>
+                        <SignInButton>
+                            <button className='bg-white text-black px-4 py-1 rounded-2xl cursor-pointer'>
+                                Sign In
+                            </button>
+                        </SignInButton>
+                    </SignedOut>
+                    <SignedIn>
+                        <UserButton 
+                            afterSignOutUrl="/"
+                            appearance={{
+                                elements: {
+                                    avatarBox: "w-8 h-8"
+                                }
+                            }}
+                        />
+                    </SignedIn>
                 </div>
                 <div className='flex items-center gap-4'>
                     <p className='bg-white text-black text-[15px] px-4 py-1 rounded-2xl hidden md:block cursor-pointer'>Explore Premium</p>
