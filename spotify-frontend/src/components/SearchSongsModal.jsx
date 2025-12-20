@@ -30,6 +30,91 @@ const SearchSongsModal = ({ playlistId, onClose, onSongAdded }) => {
   }, [songsData, currentPlaylist]);
 
 
+
+  const handleSearch = async (e) => {
+    e?.preventDefault();
+
+    if (!searchTerm.trim()) {
+      // If search is cleared, reload initial results
+      const playlistSongIds = currentPlaylist?.songs?.map(song => song._id) || [];
+      const filteredSongs = songsData.filter(song => !playlistSongIds.includes(song._id));
+      setSearchResults(filteredSongs.slice(0, 20));
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log("Searching for:", searchTerm);
+
+      // Filter songs locally based on search term
+      const playlistSongIds = currentPlaylist?.songs?.map(song => song._id) || [];
+      const filteredSongs = songsData.filter(song => {
+        // Don't include songs already in the playlist
+        if (playlistSongIds.includes(song._id)) return false;
+
+        // Search by song name, artist name, or album
+        const songName = (song.name || '').toLowerCase();
+        const artistName = (song.artistName || song.artist || '').toLowerCase();
+        const album = (song.album || '').toLowerCase();
+        const term = searchTerm.toLowerCase();
+
+        return songName.includes(term) || artistName.includes(term) || album.includes(term);
+      });
+
+      console.log("Search found", filteredSongs.length, "matching songs");
+      setSearchResults(filteredSongs);
+    } catch (error) {
+      console.error('Error searching songs:', error);
+      setError('An error occurred while searching for songs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddSong = async (songId) => {
+    if (!isSignedIn) {
+      setError('You must be signed in to add songs to playlists');
+      return;
+    }
+
+    // Since we're already in the context of a specific playlist (playlistId is passed as prop),
+    // always add the song directly to the current playlist
+    await addSongToCurrentPlaylist(songId);
+  };
+
+  const addSongToCurrentPlaylist = async (songId) => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const result = await addSongToPlaylist(playlistId, songId, user.id);
+
+      if (result.success) {
+        setSuccess('Song added to playlist successfully');
+
+        // Remove the added song from search results
+        setSearchResults(prev => prev.filter(song => song._id !== songId));
+
+        // Notify parent component
+        if (onSongAdded) {
+          onSongAdded(songId);
+        }
+      } else {
+        setError(result.message || 'Failed to add song to playlist');
+      }
+    } catch (error) {
+      console.error('Error adding song to playlist:', error);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
   if (!isSignedIn) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
