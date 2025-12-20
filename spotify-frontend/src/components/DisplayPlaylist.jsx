@@ -1,17 +1,25 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayerContext } from '../context/PlayerContext';
+import { useUser } from '@clerk/clerk-react';
 import { assets } from '../assets/frontend-assets/assets';
 import SearchSongsModal from './SearchSongsModal';
 import PlaylistManagement from './PlaylistManagement';
 
 const DisplayPlaylist = () => {
   const { id } = useParams();
+  const { user } = useUser();
+  const navigate = useNavigate();
   const {
+    loadPlaylist,
     currentPlaylist,
+    playPlaylist,
     playWithId,
     playStatus,
+    play,
+    pause,
     track,
+    removeSongFromPlaylist
   } = useContext(PlayerContext);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -19,8 +27,134 @@ const DisplayPlaylist = () => {
   const [isOwner, setIsOwner] = useState(false);
   const [showAddSongsModal, setShowAddSongsModal] = useState(false);
   const [showManagePlaylist, setShowManagePlaylist] = useState(false);
+  const [isRequestInProgress, setIsRequestInProgress] = useState(false);
 
   // Generate dynamic background color based on playlist name
+  const generatePlaylistColor = (playlistName) => {
+    if (!playlistName) return 'from-gray-800 to-gray-900';
+
+    const colors = [
+      'from-purple-800 to-purple-900',
+      'from-blue-800 to-blue-900',
+      'from-green-800 to-green-900',
+      'from-red-800 to-red-900',
+      'from-yellow-800 to-yellow-900',
+      'from-pink-800 to-pink-900',
+      'from-indigo-800 to-indigo-900',
+      'from-teal-800 to-teal-900',
+      'from-orange-800 to-orange-900',
+      'from-cyan-800 to-cyan-900'
+    ];
+
+    // Create a simple hash from the playlist name
+    let hash = 0;
+    for (let i = 0; i < playlistName.length; i++) {
+      hash = playlistName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Use the hash to select a color
+    const colorIndex = Math.abs(hash) % colors.length;
+    return colors[colorIndex];
+  };
+
+  useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates after unmount
+    let timeoutId = null;
+
+    const fetchPlaylist = async () => {
+      if (!isMounted || isRequestInProgress) return;
+
+      console.log(`[DisplayPlaylist] Starting to fetch playlist with ID: ${id}`);
+      setIsRequestInProgress(true);
+      setIsLoading(true);
+      setError('');
+
+      // Set a timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          console.error('[DisplayPlaylist] Request timed out');
+          setError('Request timed out. Please try again.');
+          setIsLoading(false);
+          setIsRequestInProgress(false);
+        }
+      }, 10000); // 10 second timeout
+
+      try {
+        if (!id) {
+          console.error('[DisplayPlaylist] No playlist ID provided');
+          setError('Invalid playlist ID');
+          setIsLoading(false);
+          return;
+        }
+
+        const clerkId = user?.id || '';
+        console.log(`[DisplayPlaylist] Fetching playlist with ID: ${id}, clerkId: ${clerkId}`);
+
+        const result = await loadPlaylist(id, clerkId);
+        console.log(`[DisplayPlaylist] Load playlist result:`, result);
+
+        // Clear timeout since we got a response
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        if (!isMounted) {
+          console.log('[DisplayPlaylist] Component unmounted, skipping state update');
+          return; // Check if component is still mounted
+        }
+
+        if (!result.success) {
+          console.error('[DisplayPlaylist] Failed to load playlist:', result.message);
+          setError(result.message || 'Failed to load playlist');
+        } else {
+          console.log('[DisplayPlaylist] Playlist loaded successfully:', result.playlist);
+
+          // Verify that songs are properly populated
+          if (!result.playlist.songs) {
+            console.error('[DisplayPlaylist] Playlist songs array is undefined');
+            setError('Playlist data is incomplete');
+            return;
+          }
+
+          // Check if the current user is the owner of the playlist
+          if (result.playlist.creator && user) {
+            const isOwnerCheck = result.playlist.creator._id === user.id ||
+              (result.playlist.creator.clerkId && result.playlist.creator.clerkId === user.id);
+            console.log(`[DisplayPlaylist] Owner check: ${isOwnerCheck}`);
+            setIsOwner(isOwnerCheck);
+          }
+        }
+      } catch (error) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (!isMounted) return;
+        console.error('[DisplayPlaylist] Error loading playlist:', error);
+        setError(`An unexpected error occurred: ${error.message}`);
+      } finally {
+        if (isMounted) {
+          console.log('[DisplayPlaylist] Setting loading to false');
+          setIsLoading(false);
+          setIsRequestInProgress(false);
+        }
+      }
+    };
+
+    // Fetch playlist immediately
+    fetchPlaylist();
+
+    // Cleanup function to reset state when component unmounts or ID changes
+    return () => {
+      isMounted = false; // Mark as unmounted
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      console.log('[DisplayPlaylist] Component cleanup');
+    };
+  }, [id]);
+
   if (isLoading) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center text-white">
