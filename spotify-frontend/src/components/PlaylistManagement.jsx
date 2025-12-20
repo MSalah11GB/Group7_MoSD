@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { PlayerContext } from '../context/PlayerContext';
 import { useUser } from '@clerk/clerk-react';
+import { assets } from '../assets/frontend-assets/assets';
 import axios from 'axios';
 
 const url = 'http://localhost:4000';
@@ -67,6 +68,38 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
       setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(songs);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setSongs(items);
+
+    // Update the playlist in the context
+    if (currentPlaylist) {
+      const updatedPlaylist = {
+        ...currentPlaylist,
+        songs: items
+      };
+      setCurrentPlaylist(updatedPlaylist);
+    }
+
+    // Save the new order to the backend
+    try {
+      await axios.post(`${url}/api/playlist/reorder-songs`, {
+        playlistId,
+        songIds: items.map(song => song._id),
+        clerkId: user?.id || ''
+      });
+    } catch (error) {
+      console.error('Error saving song order:', error);
+      // Revert to original order if save fails
+      loadPlaylistData();
     }
   };
 
@@ -165,6 +198,39 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
       console.error('Error deleting playlist:', error);
       // Error handling in background
     });
+  };
+
+  const handleDuplicatePlaylist = async () => {
+    try {
+      // Create a new playlist with the same songs
+      const formData = new FormData();
+      formData.append('name', `${playlistDetails.name} (Copy)`);
+      formData.append('description', playlistDetails.description);
+      formData.append('clerkId', user?.id || '');
+
+      const response = await axios.post(`${url}/api/playlist/create`, formData);
+
+      if (response.data.success) {
+        const newPlaylistId = response.data.playlist._id;
+
+        // Add all songs to the new playlist
+        for (const song of songs) {
+          await axios.post(`${url}/api/playlist/add-song`, {
+            playlistId: newPlaylistId,
+            songId: song._id,
+            clerkId: user?.id || ''
+          });
+        }
+
+        // Navigate to the new playlist using React Router for instant navigation
+        navigate(`/playlist/${newPlaylistId}`);
+      } else {
+        setError(response.data.message || 'Failed to duplicate playlist');
+      }
+    } catch (error) {
+      console.error('Error duplicating playlist:', error);
+      setError('An unexpected error occurred');
+    }
   };
 
   if (isLoading) {
