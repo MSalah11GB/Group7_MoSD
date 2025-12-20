@@ -8,6 +8,7 @@ const AddGenre = () => {
 
   const [image, setImage] = useState(false);
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
@@ -16,6 +17,8 @@ const AddGenre = () => {
       toast.error("Please upload an image");
       return;
     }
+
+    setLoading(true);
 
     try {
       const formData = new FormData();
@@ -36,9 +39,15 @@ const AddGenre = () => {
       console.log(error);
       toast.error("Error occurred");
     }
+
+    setLoading(false);
   }
 
-  return (
+  return loading ? (
+    <div className='grid place-items-center min-h-[80vh]'>
+      <div className='w-16 h-16 place-self-center border-4 border-gray-400 border-t-green-800 rounded-full animate-spin'></div>
+    </div>
+  ) : (
     <form onSubmit={onSubmitHandler} className='flex flex-col items-start gap-8 text-gray-600'>
       <div className='flex flex-col gap-4'>
         <p>Upload Image</p>
