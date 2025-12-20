@@ -42,9 +42,138 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
       });
       setIsLoading(false);
     } else {
-      //loadPlaylistData();
+      loadPlaylistData();
     }
   }, [currentPlaylist, playlistId]);
+
+  const loadPlaylistData = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const result = await loadPlaylist(playlistId, user?.id || '');
+      if (result.success) {
+        setSongs(result.playlist.songs || []);
+        setPlaylistDetails({
+          name: result.playlist.name || '',
+          description: result.playlist.description || '',
+          image: null,
+          isPublic: result.playlist.isPublic !== false // treat undefined as true
+        });
+      } else {
+        setError(result.message || 'Failed to load playlist');
+      }
+    } catch (error) {
+      console.error('Error loading playlist:', error);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveSong = async (songId) => {
+    try {
+      const result = await removeSongFromPlaylist(playlistId, songId, user?.id || '');
+      if (result.success) {
+        setSongs(songs.filter(song => song._id !== songId));
+      }
+    } catch (error) {
+      console.error('Error removing song:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPlaylistDetails(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPlaylistDetails(prev => ({
+        ...prev,
+        image: file
+      }));
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdatePlaylist = async (e) => {
+    e.preventDefault();
+
+    try {
+      const formData = new FormData();
+      formData.append('id', playlistId);
+      formData.append('name', playlistDetails.name);
+      formData.append('description', playlistDetails.description);
+      formData.append('isPublic', playlistDetails.isPublic);
+      formData.append('clerkId', user?.id || '');
+
+      if (playlistDetails.image) {
+        formData.append('image', playlistDetails.image);
+      }
+
+      const response = await axios.post(`${url}/api/playlist/update`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        // Reload playlist data
+        loadPlaylistData();
+        setShowEditModal(false);
+      } else {
+        setError(response.data.message || 'Failed to update playlist');
+      }
+    } catch (error) {
+      console.error('Error updating playlist:', error);
+      setError('An unexpected error occurred');
+    }
+  };
+
+  const handleDeletePlaylist = () => {
+    console.log('Deleting playlist with optimistic update:', playlistId);
+
+    // Close the confirmation modal immediately
+    setShowDeleteConfirm(false);
+
+    // Close the management modal immediately (optimistic)
+    onClose();
+
+    // Navigate back to home immediately (optimistic) - using React Router for instant navigation
+    navigate('/');
+
+    // Fire-and-forget: Start the delete process in background without waiting
+    deletePlaylist(playlistId, user?.id || '').then(result => {
+      if (!result.success) {
+        console.error('Delete failed:', result.message);
+        // Show error notification (could add a toast notification here)
+        // Note: User has already navigated away, so this is just for logging
+      } else {
+        console.log('Playlist deleted successfully');
+      }
+    }).catch(error => {
+      console.error('Error deleting playlist:', error);
+      // Error handling in background
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-white">
