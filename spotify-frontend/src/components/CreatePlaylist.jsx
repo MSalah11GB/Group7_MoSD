@@ -1,12 +1,85 @@
 import React, { useState, useContext } from 'react';
+import { PlayerContext } from '../context/PlayerContext';
+import { useUser } from '@clerk/clerk-react';
 import { assets } from '../assets/frontend-assets/assets';
 
 const CreatePlaylist = ({ onClose, onPlaylistCreated }) => {
+  const { createPlaylist } = useContext(PlayerContext);
+  const { user } = useUser();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(true);
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      setError('Playlist name is required');
+      return;
+    }
+
+    if (!user) {
+      setError('You must be logged in to create a playlist');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log('Creating playlist:', name, 'isPublic:', isPublic);
+
+      const result = await createPlaylist(
+        {
+          name,
+          description,
+          isPublic,
+          clerkId: user.id
+        },
+        imageFile
+      );
+
+      if (result.success) {
+        console.log('Playlist created successfully:', result.playlist);
+
+        // Add a small delay to ensure the backend has time to process
+        setTimeout(() => {
+          // Call the onPlaylistCreated callback if provided
+          if (onPlaylistCreated) {
+            onPlaylistCreated(result.playlist);
+          } else {
+            // If no callback is provided, just close the modal
+            onClose();
+          }
+        }, 500);
+      } else {
+        console.error('Failed to create playlist:', result.message);
+        setError(result.message || 'Failed to create playlist');
+      }
+    } catch (error) {
+      console.error('Error creating playlist:', error);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
