@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
-import { assets } from '../assets/admin-assets/assets'
+import { assets } from '../assets/assets'
 import axios from 'axios';
 import { url } from '../App';
 import { toast } from 'react-toastify';

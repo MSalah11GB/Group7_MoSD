@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { url } from '../App';
 import { toast } from 'react-toastify';
-import { assets } from '../assets/admin-assets/assets';
+import { assets } from '../assets/assets';
 import { FaSearch, FaTrash, FaEdit } from 'react-icons/fa';
 
 const ListAlbum = () => {
