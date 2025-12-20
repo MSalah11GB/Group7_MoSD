@@ -1,6 +1,6 @@
 import express from 'express';
 import { addGenre, listGenre, removeGenre, updateGenre } from '../controllers/genreController.js';
-import upload from '../middlewares/multer.js';
+import upload from '../middleware/multer.js';
 
 const genreRouter = express.Router();
 
