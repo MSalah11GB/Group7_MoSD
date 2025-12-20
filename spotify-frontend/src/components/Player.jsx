@@ -6,7 +6,7 @@ const Player = () => {
 
     const { track, seekBar, seekBg, play, pause, playStatus, time, nextSong, previousSong,
         seekSong, loopMode, toggleLoopMode, LOOP_MODE, shuffleMode, toggleShuffleMode, volume, handleVolumeChange,
-        isMuted, toggleMute, changeVolume } = useContext(PlayerContext)
+        isMuted, toggleMute, changeVolume, toggleLyrics, currentLyrics, showLyrics } = useContext(PlayerContext)
 
     const getLoopIconStyle = () => {
         switch (loopMode) {
@@ -119,7 +119,20 @@ const Player = () => {
 
             <div className='hidden lg:flex items-center gap-3 opacity-75'>
                 <img className='w-4 cursor-pointer' src={assets.plays_icon} alt="Plays" />
-                <img className='w-4 cursor-pointer' src={assets.mic_icon} alt="Mic" />
+                <div
+                    onClick={toggleLyrics}
+                    className={`relative cursor-pointer ${currentLyrics && currentLyrics.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={currentLyrics && currentLyrics.length > 0 ? (showLyrics ? "Hide Lyrics" : "Show Lyrics") : "No lyrics available"}
+                >
+                    <img
+                        className="w-4"
+                        src={assets.mic_icon}
+                        alt="Lyrics"
+                    />
+                    {currentLyrics && currentLyrics.length > 0 && (
+                        <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${showLyrics ? 'bg-green-500' : 'bg-white'}`}></div>
+                    )}
+                </div>
                 <img className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue" />
                 <img onClick={toggleMute} className='w-4 cursor-pointer' src={isMuted ? (assets.mute_icon) : assets.volume_icon}
                     alt={isMuted ? "Unmute" : "Mute"} title={isMuted ? "Unmute" : "Mute"} />
