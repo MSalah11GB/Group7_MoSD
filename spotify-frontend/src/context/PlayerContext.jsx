@@ -29,6 +29,7 @@ const PlayerContextProvider = (props) => {
         totalTime: { second: 0, minute: 0 }
     });
     const [playOnLoad, setPlayOnLoad] = useState(false);
+    const [showFullscreen, setShowFullscreen] = useState(false);
     useEffect(() => {
         // Initialize audio element properties when component mounts
         const audio = audioRef.current;
@@ -199,6 +200,27 @@ const PlayerContextProvider = (props) => {
         setPlayOnLoad(true);
     }
 
+    // Toggle browser fullscreen mode
+    const toggleBrowserFullscreen = async () => {
+        if (!document.fullscreenElement) {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.error("Fullscreen error:", err);
+            }
+        } else await document.exitFullscreen();
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setShowFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        return () =>
+            document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    }, []);
+
     // Effect to handle track changes: update src, load, and play if intended
     useEffect(() => {
         if (track && track.file) { // track.file should be the audio URL
@@ -316,7 +338,8 @@ const PlayerContextProvider = (props) => {
         loopMode, toggleLoopMode, LOOP_MODE,
         shuffleMode, toggleShuffleMode,
         volume, changeVolume,
-        isMuted, toggleMute
+        isMuted, toggleMute,
+        showFullscreen, toggleBrowserFullscreen,
     }
 
     return (

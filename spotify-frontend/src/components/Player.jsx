@@ -4,9 +4,12 @@ import { PlayerContext } from '../context/PlayerContext';
 
 const Player = () => {
 
-    const { track, seekBar, seekBg, play, pause, playStatus, time, nextSong, previousSong,
-        seekSong, loopMode, toggleLoopMode, LOOP_MODE, shuffleMode, toggleShuffleMode, volume, handleVolumeChange,
-        isMuted, toggleMute, changeVolume } = useContext(PlayerContext)
+    const { track, seekBar, seekBg, play, pause, playStatus, time, 
+        nextSong, previousSong, seekSong, loopMode, toggleLoopMode, LOOP_MODE, 
+        shuffleMode, toggleShuffleMode, 
+        volume, changeVolume, isMuted, toggleMute,
+        showFullscreen, toggleBrowserFullscreen
+    } = useContext(PlayerContext)
 
     const getLoopIconStyle = () => {
         switch (loopMode) {
@@ -59,6 +62,11 @@ const Player = () => {
         handleVolumeInteraction(event);
     }, [handleVolumeInteraction]);
 
+    const toggleFullscreen = () => {
+        //setShowFullscreen(prev => !prev);
+        toggleBrowserFullscreen();
+    };
+
     useEffect(() => {
         const handleMouseMove = (event) => {
             if (isDraggingVolume) {
@@ -91,6 +99,7 @@ const Player = () => {
                     <p>{track.artistName || track.artist}</p>
                 </div>
             </div>
+
             <div className='flex flex-col items-center gap-1 m-auto'>
                 <div className='flex gap-4'>
                     <img onClick = {toggleShuffleMode} className='w-4 cursor-pointer' src={assets.shuffle_icon} style={getShuffleIconStyle()} alt="Shuffle" />
@@ -118,7 +127,6 @@ const Player = () => {
             </div>
 
             <div className='hidden lg:flex items-center gap-3 opacity-75'>
-                <img className='w-4 cursor-pointer' src={assets.plays_icon} alt="Plays" />
                 <img className='w-4 cursor-pointer' src={assets.mic_icon} alt="Mic" />
                 <img className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue" />
                 <img onClick={toggleMute} className='w-4 cursor-pointer' src={isMuted ? (assets.mute_icon) : assets.volume_icon}
@@ -136,8 +144,11 @@ const Player = () => {
                     style={{ left: `calc(${displayVolumePercentage}% - 6px)` }}
                 />
             </div>
-            <img className='w-4 cursor-pointer' src={assets.mini_player_icon} alt="" />
-            <img className='w-4 cursor-pointer' src={assets.zoom_icon} alt="Fullscreen" />
+            <img className='w-4 cursor-pointer' src={assets.mini_player_icon} alt="Mini player" />
+            <img onClick={toggleFullscreen} className='w-4 cursor-pointer' src={assets.zoom_icon} alt="Fullscreen"
+                title={showFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                style={showFullscreen ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}}
+            />
         </div>
     </div>
     ) : null
