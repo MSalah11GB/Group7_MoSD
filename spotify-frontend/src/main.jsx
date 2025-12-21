@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import PlayerContextProvider from './context/PlayerContext.jsx'
+import PlaylistContextProvider from './context/PlaylistContext.jsx'
 import AuthSync from './components/AuthSync'
 import { ClerkProvider } from '@clerk/clerk-react'
 
@@ -13,16 +14,17 @@ if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Publishable Key')
 }
 
-
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+    <StrictMode>
         <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl='/'>
-      <BrowserRouter>
-        <PlayerContextProvider>
-          <AuthSync />
-          <App />
-        </PlayerContextProvider>
-      </BrowserRouter>
-    </ClerkProvider>
-  </StrictMode>,
+            <BrowserRouter>
+                <PlayerContextProvider>
+                    <PlaylistContextProvider>
+                        <AuthSync />
+                        <App />
+                    </PlaylistContextProvider>
+                </PlayerContextProvider>
+            </BrowserRouter>
+        </ClerkProvider>
+    </StrictMode>,
 )

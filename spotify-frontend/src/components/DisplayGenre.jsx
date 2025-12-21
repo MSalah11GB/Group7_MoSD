@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { PlayerContext } from '../context/PlayerContext';
-import { assets } from '../assets/frontend-assets/assets';
+import { assets } from '../assets/assets';
 
 const DisplayGenre = () => {
   const { genreId } = useParams();

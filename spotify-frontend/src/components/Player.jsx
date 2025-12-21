@@ -8,7 +8,8 @@ const Player = () => {
         nextSong, previousSong, seekSong, loopMode, toggleLoopMode, LOOP_MODE, 
         shuffleMode, toggleShuffleMode, 
         volume, changeVolume, isMuted, toggleMute,
-        showFullscreen, toggleBrowserFullscreen
+        showFullscreen, toggleBrowserFullscreen,
+        showQueue, toggleQueue
     } = useContext(PlayerContext)
 
     const getLoopIconStyle = () => {
@@ -107,7 +108,7 @@ const Player = () => {
                     {!playStatus ? (
                         <img onClick={play} className='w-4 cursor-pointer' src={assets.play_icon} alt="play_icon" />
                     ) : (
-                        <img onClick={pause} className='w-4 cursor-pointer' src={assets.pause_icon} alt="pause_icon" />
+                        <img onClick={pause} className='w-4 cursor-pointer' src={assets.pause_icon} alt="S" />
                     )}
                     <img onClick = {nextSong} className='w-4 cursor-pointer' src={assets.next_icon} alt="Next" />
                     <img onClick={toggleLoopMode} className='w-4 cursor-pointer' src={getLoopIcon()} // Use function to get potentially different icons
@@ -128,9 +129,13 @@ const Player = () => {
 
             <div className='hidden lg:flex items-center gap-3 opacity-75'>
                 <img className='w-4 cursor-pointer' src={assets.mic_icon} alt="Mic" />
-                <img className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue" />
+                <img onClick={toggleQueue} className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue"
+                    title={showQueue ? "Hide Queue" : "Show Queue"}
+                    style={showQueue ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}} />
+
                 <img onClick={toggleMute} className='w-4 cursor-pointer' src={isMuted ? (assets.mute_icon) : assets.volume_icon}
                     alt={isMuted ? "Unmute" : "Mute"} title={isMuted ? "Unmute" : "Mute"} />
+
                 <div
                     ref={volumeBarBgRef}
                     onMouseDown={handleMouseDownVolume}
@@ -144,7 +149,9 @@ const Player = () => {
                     style={{ left: `calc(${displayVolumePercentage}% - 6px)` }}
                 />
             </div>
+
             <img className='w-4 cursor-pointer' src={assets.mini_player_icon} alt="Mini player" />
+
             <img onClick={toggleFullscreen} className='w-4 cursor-pointer' src={assets.zoom_icon} alt="Fullscreen"
                 title={showFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                 style={showFullscreen ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}}

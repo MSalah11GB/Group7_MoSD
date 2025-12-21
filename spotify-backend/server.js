@@ -5,10 +5,11 @@ import connectDB from './src/config/mongodb.js';
 import connectCloudinary from './src/config/cloudinary.js';
 import albumRouter from './src/routes/albumRoute.js';
 import artistRouter from './src/routes/artistRoute.js';
-import userRouter from './src/routes/userRoute.js';
 import authRouter from './src/routes/authRoute.js';
 import genreRouter from './src/routes/genreRoute.js';
 import songRouter from './src/routes/songRoute.js';
+import userRouter from './src/routes/userRoute.js';
+import playlistRouter from './src/routes/playlistRoute.js';
 import { clerkMiddleware} from '@clerk/express'
 //app config
 const app = express()
@@ -29,6 +30,7 @@ app.use("/api/users", userRouter)
 app.use("/api/auth", authRouter)
 app.use("/api/genre", genreRouter)
 app.use("/api/song", songRouter)
+app.use("/api/playlist", playlistRouter)
 
 app.get('/',(req, res)=> res.send("API Working"))
 

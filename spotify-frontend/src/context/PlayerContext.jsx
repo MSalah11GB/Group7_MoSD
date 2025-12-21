@@ -3,6 +3,7 @@ import axios from 'axios';
 
 export const PlayerContext = createContext();
 
+const url = 'http://localhost:4000';
 const LOOP_MODE = {
     NO_LOOP: 0, // Song plays once, then stops
     LOOP_ONE: 1, // Song plays twice, then stops
@@ -10,7 +11,6 @@ const LOOP_MODE = {
 };
 
 const PlayerContextProvider = (props) => {
-    const url = 'http://localhost:4000';
     const audioRef = useRef();
     const seekBar = useRef();
     const seekBg = useRef();
@@ -30,6 +30,7 @@ const PlayerContextProvider = (props) => {
     });
     const [playOnLoad, setPlayOnLoad] = useState(false);
     const [showFullscreen, setShowFullscreen] = useState(false);
+    const [showQueue, setShowQueue] = useState(false);
     useEffect(() => {
         // Initialize audio element properties when component mounts
         const audio = audioRef.current;
@@ -221,6 +222,11 @@ const PlayerContextProvider = (props) => {
             document.removeEventListener("fullscreenchange", handleFullscreenChange);
     }, []);
 
+    // Toggle the Queue view
+    const toggleQueue = () => {
+        setShowQueue(prev => !prev);
+    };
+
     // Effect to handle track changes: update src, load, and play if intended
     useEffect(() => {
         if (track && track.file) { // track.file should be the audio URL
@@ -335,11 +341,13 @@ const PlayerContextProvider = (props) => {
         playWithId,
         previousSong, nextSong, seekSong,
         songsData, albumsData,
+        setPlayOnLoad,
         loopMode, toggleLoopMode, LOOP_MODE,
         shuffleMode, toggleShuffleMode,
         volume, changeVolume,
         isMuted, toggleMute,
         showFullscreen, toggleBrowserFullscreen,
+        showQueue, setShowQueue, toggleQueue,
     }
 
     return (

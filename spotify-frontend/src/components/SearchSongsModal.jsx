@@ -1,10 +1,12 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { PlayerContext } from '../context/PlayerContext';
 import { useUser } from '@clerk/clerk-react';
-import { assets } from '../assets/frontend-assets/assets';
+import { assets } from '../assets/assets';
+import { PlaylistContext } from '../context/PlaylistContext';
 
 const SearchSongsModal = ({ playlistId, onClose, onSongAdded }) => {
-  const { addSongToPlaylist, songsData, currentPlaylist } = useContext(PlayerContext);
+  const { songsData } = useContext(PlayerContext);
+  const { addSongToPlaylist, currentPlaylist} = useContext(PlaylistContext);
   const { user, isSignedIn } = useUser();
 
   const [searchTerm, setSearchTerm] = useState('');

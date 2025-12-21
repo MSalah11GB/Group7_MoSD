@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
+import { PlayerContext } from '../context/PlayerContext'
 import Navbar from './Navbar'
 import AlbumItem from './AlbumItem'
-import { PlayerContext } from '../context/PlayerContext'
 import SongItem from './SongItem'
 const DisplayHome = () => {
 

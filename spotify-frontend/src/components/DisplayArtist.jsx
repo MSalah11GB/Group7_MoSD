@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from './Navbar';
 import { PlayerContext } from '../context/PlayerContext';
-import { assets } from '../assets/frontend-assets/assets';
+import { assets } from '../assets/assets';
 
 const DisplayArtist = () => {
   const { id } = useParams();
