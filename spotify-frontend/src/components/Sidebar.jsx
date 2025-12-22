@@ -4,16 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import PlaylistItem from './PlaylistItem';
 import CreatePlaylist from './CreatePlaylist';
-import { PlayerContext } from '../context/PlayerContext';
 import { PlaylistContext } from '../context/PlaylistContext';
+import Search from './Search';
 
 const Sidebar = () => {
 
     const navigate = useNavigate();
     const { user } = useUser();
-	const searchRef = useRef(null);
-	//const { songsData, playWithId } = useContext(PlayerContext);
-	const { playlistsData, createPlaylist } = useContext(PlaylistContext);
+	const { playlistsData } = useContext(PlaylistContext);
+
+	// Search state
+	const [isSearchActive, setIsSearchActive] = useState(false);
+    const searchRef = useRef(null);
+
 	const [ showCreatePlaylist, setShowCreatePlaylist ] = useState(false);
 
     const userPlaylists = playlistsData.filter(playlist => {
@@ -57,25 +60,38 @@ const Sidebar = () => {
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
-                setShowSearchResults(false);
+                setIsSearchActive(false);
+				setSearchTerm('');
+				setSearchResults([]);
+				setShowSearchResults(false);
             }
         };
 
+		if (isSearchActive) document.addEventListener('mousedown', handleClickOutside);
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [])
+    }, [isSearchActive])
 
   	return (
 		<div className='w-[25%] h-full p-2 flex-col gap-2 text-white hidden lg:flex'>
 			<div className='bg-[#121212] h-[15%] rounded flex flex-col justify-around'>
 				<div onClick={()=>navigate('/')} className='flex items-center gap-3 pl-8 cursor-pointer'>
-				<img className='w-6' src={assets.home_icon} alt="" />
-				<p className='font-bold'>Home</p>
+					<img className='w-6' src={assets.home_icon} alt="" />
+					<p className='font-bold'>Home</p>
 				</div>
-				<div onClick={()=>navigate('/')} className='flex items-center gap-3 pl-8 cursor-pointer'>
-				<img className='w-6' src={assets.search_icon} alt="" />
-				<p className='font-bold'>Search</p>
+
+				{!isSearchActive && (
+				<div onClick={() => setIsSearchActive(true)} className='flex items-center gap-3 pl-8 cursor-pointer hover:text-gray-300'>
+					<img className='w-6' src={assets.search_icon} alt="" />
+					<p className='font-bold'>Search</p>
 				</div>
+				)}
+				
+				{isSearchActive && (
+                <Search onClose={() => setIsSearchActive(false)} />
+                )}
+
 			</div>
 
 			<div className='bg-[#121212] h-[85%] rounded'>

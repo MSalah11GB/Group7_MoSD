@@ -119,11 +119,11 @@ const Player = () => {
                     />
                 </div>
                 <div className='flex items-center gap-5'>
-                    <p>{time.currentTime.minute}:{time.currentTime.second}</p>
+                    <p className='w-8 text-center'>{time.currentTime.minute}:{time.currentTime.second < 10 ? `0${time.currentTime.second}` : time.currentTime.second}</p>
                     <div ref = {seekBg} onClick = {seekSong} className='w-[50vw] md:w-[60vw] max-w-[500px] bg-gray-300 rounded-full cursor-pointer'>
                         <hr ref = {seekBar} className='h-1 border-none w-10 bg-green-800 rounded-full' />
                     </div>
-                    <p>{time.totalTime.minute}:{time.totalTime.second}</p>
+                    <p className='w-8 text-center'>{time.totalTime.minute}:{time.totalTime.second < 10 ? `0${time.totalTime.second}` : time.totalTime.second}</p>
                 </div>
             </div>
 

@@ -70,8 +70,7 @@ const PlayerContextProvider = (props) => {
                 const volumeToRestore = previousVolume > 0 ? previousVolume : 0.5;
                 setVolume(volumeToRestore);
                 audioRef.current.volume = volumeToRestore;
-            }
-            // If volume > 0, it's already set by the slider/changeVolume, no need to change here.
+            } // If volume > 0, it's already set by the slider/changeVolume, no need to change here.
         }
     }, [volume, previousVolume, setIsMuted, setVolume]);
 

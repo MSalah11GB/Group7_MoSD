@@ -9,7 +9,7 @@ const PlaylistItem = ({ playlist }) => {
     if (!playlist || !playlist._id || !playlist.name) { console.error('Invalid playlist data:', playlist); return null;}
 
     useEffect(() => { 
-        console.log('Playlist item rendered:', playlist._id, playlist.name); // Log playlist data for debugging
+        //console.log('Playlist item rendered:', playlist._id, playlist.name); // Log playlist data for debugging
     }, [playlist]);
 
     const handleClick = (e) => {

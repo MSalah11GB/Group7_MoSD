@@ -220,7 +220,7 @@ const PlaylistContextProvider = (props) => {
             try {
                 const response = await axios.get(`${url}/api/playlist/list`);
                 if (response.data.success) {
-                    console.log('Initial playlists loaded:', response.data.playlists);
+                    //console.log('Initial playlists loaded:', response.data.playlists);
                     setPlaylistsData(response.data.playlists);
                 }
             } catch (error) {
