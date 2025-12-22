@@ -9,7 +9,8 @@ const Player = () => {
         shuffleMode, toggleShuffleMode, 
         volume, changeVolume, isMuted, toggleMute,
         showFullscreen, toggleBrowserFullscreen,
-        showQueue, toggleQueue
+        showQueue, toggleQueue,
+        toggleLyrics, currentLyrics, showLyrics 
     } = useContext(PlayerContext)
 
     const getLoopIconStyle = () => {
@@ -128,11 +129,26 @@ const Player = () => {
             </div>
 
             <div className='hidden lg:flex items-center gap-3 opacity-75'>
-                <img className='w-4 cursor-pointer' src={assets.mic_icon} alt="Mic" />
+                <div
+                    onClick={toggleLyrics}
+                    className={`relative cursor-pointer ${currentLyrics && currentLyrics.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={currentLyrics && currentLyrics.length > 0 ? (showLyrics ? "Hide Lyrics" : "Show Lyrics") : "No lyrics available"}
+                >
+                    <img
+                        className="w-4"
+                        src={assets.mic_icon}
+                        alt="Lyrics"
+                    />
+                    {currentLyrics && currentLyrics.length > 0 && (
+                        <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${showLyrics ? 'bg-green-500' : 'bg-white'}`}></div>
+                    )}
+                </div>
                 <img onClick={toggleQueue} className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue"
                     title={showQueue ? "Hide Queue" : "Show Queue"}
                     style={showQueue ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}} />
 
+                <img className='w-4 cursor-pointer' src={assets.plays_icon} alt="Plays" />
+                
                 <img onClick={toggleMute} className='w-4 cursor-pointer' src={isMuted ? (assets.mute_icon) : assets.volume_icon}
                     alt={isMuted ? "Unmute" : "Mute"} title={isMuted ? "Unmute" : "Mute"} />
 
