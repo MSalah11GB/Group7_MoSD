@@ -44,8 +44,9 @@ describe('Database Model Relationships', () => {
 
     it('should create a complete chain: Genre -> Artist -> Album -> Song -> User -> Playlist', async () => {
         if (!mongoAvailable) return;
+        const uniqueGenreName = `Pop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const genre = await Genre.create({
-            name: 'Pop',
+            name: uniqueGenreName,
             songCount: 0
         });
 
