@@ -5,10 +5,11 @@
  */
 export const normalizeGenreName = (name) => {
   if (!name) return "";
-  // Convert to lowercase and remove all non-alphanumeric characters
+  // Convert to lowercase, remove punctuation, and ignore whitespace differences
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, "")
     .trim();
 };
 
