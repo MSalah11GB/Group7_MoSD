@@ -6,7 +6,7 @@ const connectDB = async () => {
         console.log("connection establised");
     })
 
-    await mongoose.connect(`${process.env.MONGODB_URI}/Musicify`);
+    await mongoose.connect(`${process.env.MONGODB_URI}`);
 }
 
 export default connectDB;
