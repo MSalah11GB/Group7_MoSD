@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 import genreModel from "../models/genreModel.js";
 import 'dotenv/config.js'
+import { pathToFileURL } from 'url';
 
-async function migrate() {
+export async function migrate({ exitProcess = true } = {}) {
     console.log(process.env.MONGODB_URI);
     try {
         await mongoose.connect(`${process.env.MONGODB_URI}/Musicify`);
@@ -17,8 +18,12 @@ async function migrate() {
         console.error("Migration failed:", err);
     } finally {
         await mongoose.disconnect();
-        process.exit(0);
+        if (exitProcess) {
+            process.exit(0);
+        }
     }
 }
 
-migrate();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    migrate();
+}
