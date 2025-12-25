@@ -23,6 +23,27 @@ describe('config', () => {
     expect(connectMock).toHaveBeenCalledWith('mongodb://localhost:27017/Musicify');
   });
 
+  test('connectDB respects database name in MONGODB_URI', async () => {
+    jest.resetModules();
+
+    const connectMock = jest.fn();
+    const onMock = jest.fn();
+
+    await jest.unstable_mockModule('mongoose', () => ({
+      default: {
+        connect: connectMock,
+        connection: { on: onMock },
+      },
+    }));
+
+    process.env.MONGODB_URI = 'mongodb://localhost:27017/test_db';
+
+    const { default: connectDB } = await import('../src/config/mongodb.js');
+    await connectDB();
+
+    expect(connectMock).toHaveBeenCalledWith('mongodb://localhost:27017/test_db');
+  });
+
   test('connectCloudinary uses env credentials', async () => {
     jest.resetModules();
 
