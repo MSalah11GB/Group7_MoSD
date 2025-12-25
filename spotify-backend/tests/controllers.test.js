@@ -4,7 +4,7 @@ describe('controllers', () => {
   test('genre normalizeGenreName strips punctuation and lowercases', async () => {
     const { normalizeGenreName } = await import('../src/controllers/genreController.js');
     expect(normalizeGenreName('  Hip-Hop!!  ')).toBe('hiphop');
-    expect(normalizeGenreName('R&B / Soul')).toBe('rb  soul');
+    expect(normalizeGenreName('R&B / Soul')).toBe('rbsoul');
     expect(normalizeGenreName('')).toBe('');
   });
 

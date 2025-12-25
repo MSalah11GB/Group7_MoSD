@@ -8,8 +8,13 @@ import mongoose from 'mongoose';
  */
 export const normalizeGenreName = (name) => {
     if (!name) return '';
-    // Convert to lowercase and remove all non-alphabetic characters (except spaces)
-    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    // Convert to lowercase, remove punctuation, and ignore whitespace differences
+    // so values like "Hip-Hop" and "hip hop" are treated as duplicates.
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
 };
 
 const addGenre = async (req, res) => {
