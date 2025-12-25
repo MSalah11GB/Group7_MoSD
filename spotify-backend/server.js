@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config.js'
-import connectDB, { listDbCollections } from './src/config/mongodb.js';
+import connectDB, { listDbCollections, listDbSongs } from './src/config/mongodb.js';
 import connectCloudinary from './src/config/cloudinary.js';
 import albumRouter from './src/routes/albumRoute.js';
 import artistRouter from './src/routes/artistRoute.js';
@@ -40,6 +40,9 @@ const startServer = async () => {
 	try {
 		const collections = await listDbCollections();
 		console.log('MongoDB collections:', collections);
+
+		const songs = await listDbSongs();
+		console.log('MongoDB songs:', songs);
 	} catch (error) {
 		console.warn('Failed to list MongoDB collections on startup:', error?.message || error);
 	}
