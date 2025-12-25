@@ -4,9 +4,14 @@ import { PlayerContext } from '../context/PlayerContext';
 
 const Player = () => {
 
-    const { track, seekBar, seekBg, play, pause, playStatus, time, nextSong, previousSong,
-        seekSong, loopMode, toggleLoopMode, LOOP_MODE, shuffleMode, toggleShuffleMode, volume, handleVolumeChange,
-        isMuted, toggleMute, changeVolume } = useContext(PlayerContext)
+    const { track, seekBar, seekBg, play, pause, playStatus, time, 
+        nextSong, previousSong, seekSong, loopMode, toggleLoopMode, LOOP_MODE, 
+        shuffleMode, toggleShuffleMode, 
+        volume, changeVolume, isMuted, toggleMute,
+        showFullscreen, toggleBrowserFullscreen,
+        showQueue, toggleQueue,
+        toggleLyrics, currentLyrics, showLyrics 
+    } = useContext(PlayerContext)
 
     const getLoopIconStyle = () => {
         switch (loopMode) {
@@ -59,6 +64,11 @@ const Player = () => {
         handleVolumeInteraction(event);
     }, [handleVolumeInteraction]);
 
+    const toggleFullscreen = () => {
+        //setShowFullscreen(prev => !prev);
+        toggleBrowserFullscreen();
+    };
+
     useEffect(() => {
         const handleMouseMove = (event) => {
             if (isDraggingVolume) {
@@ -91,6 +101,7 @@ const Player = () => {
                     <p>{track.artistName || track.artist}</p>
                 </div>
             </div>
+
             <div className='flex flex-col items-center gap-1 m-auto'>
                 <div className='flex gap-4'>
                     <img onClick = {toggleShuffleMode} className='w-4 cursor-pointer' src={assets.shuffle_icon} style={getShuffleIconStyle()} alt="Shuffle" />
@@ -98,7 +109,7 @@ const Player = () => {
                     {!playStatus ? (
                         <img onClick={play} className='w-4 cursor-pointer' src={assets.play_icon} alt="play_icon" />
                     ) : (
-                        <img onClick={pause} className='w-4 cursor-pointer' src={assets.pause_icon} alt="pause_icon" />
+                        <img onClick={pause} className='w-4 cursor-pointer' src={assets.pause_icon} alt="S" />
                     )}
                     <img onClick = {nextSong} className='w-4 cursor-pointer' src={assets.next_icon} alt="Next" />
                     <img onClick={toggleLoopMode} className='w-4 cursor-pointer' src={getLoopIcon()} // Use function to get potentially different icons
@@ -109,20 +120,38 @@ const Player = () => {
                     />
                 </div>
                 <div className='flex items-center gap-5'>
-                    <p>{time.currentTime.minute}:{time.currentTime.second}</p>
+                    <p className='w-8 text-center'>{time.currentTime.minute}:{time.currentTime.second < 10 ? `0${time.currentTime.second}` : time.currentTime.second}</p>
                     <div ref = {seekBg} onClick = {seekSong} className='w-[50vw] md:w-[60vw] max-w-[500px] bg-gray-300 rounded-full cursor-pointer'>
                         <hr ref = {seekBar} className='h-1 border-none w-10 bg-green-800 rounded-full' />
                     </div>
-                    <p>{time.totalTime.minute}:{time.totalTime.second}</p>
+                    <p className='w-8 text-center'>{time.totalTime.minute}:{time.totalTime.second < 10 ? `0${time.totalTime.second}` : time.totalTime.second}</p>
                 </div>
             </div>
 
             <div className='hidden lg:flex items-center gap-3 opacity-75'>
+                <div
+                    onClick={toggleLyrics}
+                    className={`relative cursor-pointer ${currentLyrics && currentLyrics.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={currentLyrics && currentLyrics.length > 0 ? (showLyrics ? "Hide Lyrics" : "Show Lyrics") : "No lyrics available"}
+                >
+                    <img
+                        className="w-4"
+                        src={assets.mic_icon}
+                        alt="Lyrics"
+                    />
+                    {currentLyrics && currentLyrics.length > 0 && (
+                        <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${showLyrics ? 'bg-green-500' : 'bg-white'}`}></div>
+                    )}
+                </div>
+                <img onClick={toggleQueue} className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue"
+                    title={showQueue ? "Hide Queue" : "Show Queue"}
+                    style={showQueue ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}} />
+
                 <img className='w-4 cursor-pointer' src={assets.plays_icon} alt="Plays" />
-                <img className='w-4 cursor-pointer' src={assets.mic_icon} alt="Mic" />
-                <img className='w-4 cursor-pointer' src={assets.queue_icon} alt="Queue" />
+                
                 <img onClick={toggleMute} className='w-4 cursor-pointer' src={isMuted ? (assets.mute_icon) : assets.volume_icon}
                     alt={isMuted ? "Unmute" : "Mute"} title={isMuted ? "Unmute" : "Mute"} />
+
                 <div
                     ref={volumeBarBgRef}
                     onMouseDown={handleMouseDownVolume}
@@ -136,8 +165,13 @@ const Player = () => {
                     style={{ left: `calc(${displayVolumePercentage}% - 6px)` }}
                 />
             </div>
-            <img className='w-4 cursor-pointer' src={assets.mini_player_icon} alt="" />
-            <img className='w-4 cursor-pointer' src={assets.zoom_icon} alt="Fullscreen" />
+
+            <img className='w-4 cursor-pointer' src={assets.mini_player_icon} alt="Mini player" />
+
+            <img onClick={toggleFullscreen} className='w-4 cursor-pointer' src={assets.zoom_icon} alt="Fullscreen"
+                title={showFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                style={showFullscreen ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}}
+            />
         </div>
     </div>
     ) : null

@@ -13,14 +13,17 @@ import ListAlbum from './pages/ListAlbum';
 import ListArtist from './pages/ListArtist';
 import ListGenre from './pages/ListGenre';
 import EditSong from './pages/EditSong';
-import SideBar from './components/SideBar';
+import EditGenre from './pages/EditGenre';
+import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+
+export const url = 'http://localhost:4000'
 
 const App = () => {
   return (
     <div className='flex items-start min-h-screen'>
       <ToastContainer/>
-      <SideBar/>
+      <Sidebar/>
       <div className='flex-1 h-screen overflow-y-auto bg-[#F3FFF7]'>
         <Navbar/>
         <div className='pt-8 pl-5 sm:pt-12 sm:pl-12'>
@@ -38,6 +41,7 @@ const App = () => {
             <Route path="/edit-song/:id" element={<EditSong />} />
             <Route path="/edit-album/:id" element={<EditAlbum />} />
             <Route path="/edit-artist/:id" element={<EditArtist />} />
+            <Route path="/edit-genre/:id" element={<EditGenre />} />
           </Routes>
         </div>
       </div>

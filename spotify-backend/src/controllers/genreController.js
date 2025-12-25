@@ -8,13 +8,18 @@ import mongoose from 'mongoose';
  */
 export const normalizeGenreName = (name) => {
     if (!name) return '';
-    // Convert to lowercase and remove all non-alphabetic characters (except spaces)
-    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    // Convert to lowercase, remove punctuation, and ignore whitespace differences
+    // so values like "Hip-Hop" and "hip hop" are treated as duplicates.
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
 };
 
 const addGenre = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, bgColor } = req.body; 
 
         if (!name || name.trim() === '') {
             return res.json({
@@ -23,7 +28,13 @@ const addGenre = async (req, res) => {
             });
         }
 
-        // Normalize the genre name for comparison
+        if (!bgColor || bgColor.trim() === '') {
+            return res.json({
+                success: false,
+                message: "Background color is required"
+            });
+        }
+
         const normalizedName = normalizeGenreName(name);
 
         if (normalizedName === '') {
@@ -33,7 +44,6 @@ const addGenre = async (req, res) => {
             });
         }
 
-        // Get all genres and check if any normalized name matches
         const allGenres = await genreModel.find();
         const isDuplicate = allGenres.some(genre =>
             normalizeGenreName(genre.name) === normalizedName
@@ -47,9 +57,12 @@ const addGenre = async (req, res) => {
             });
         }
 
-        // Use the original name format for display, but we've verified it's unique when normalized
-        const genreData = { name: name.trim() };
-        const genre = genreModel(genreData);
+        const genreData = {
+            name: name.trim(),
+            bgColor: bgColor.trim()
+        };
+
+        const genre = new genreModel(genreData);
         await genre.save();
 
         res.json({ success: true, message: "Genre added successfully", genre });
@@ -206,7 +219,7 @@ const removeGenre = async (req, res) => {
 
 const updateGenre = async (req, res) => {
     try {
-        const { id, name } = req.body;
+        const { id, name, bgColor } = req.body;
 
         if (!name || name.trim() === '') {
             return res.json({
@@ -215,7 +228,6 @@ const updateGenre = async (req, res) => {
             });
         }
 
-        // Normalize the genre name for comparison
         const normalizedName = normalizeGenreName(name);
 
         if (normalizedName === '') {
@@ -225,7 +237,6 @@ const updateGenre = async (req, res) => {
             });
         }
 
-        // Get all genres and check if any normalized name matches (excluding the current genre)
         const allGenres = await genreModel.find({ _id: { $ne: id } });
         const isDuplicate = allGenres.some(genre =>
             normalizeGenreName(genre.name) === normalizedName
@@ -239,8 +250,13 @@ const updateGenre = async (req, res) => {
             });
         }
 
-        // Update the genre with the new name
-        await genreModel.findByIdAndUpdate(id, { name: name.trim() });
+        const updateData = { name: name.trim() };
+
+        if (bgColor && bgColor.trim() !== '') {
+            updateData.bgColor = bgColor.trim();
+        }
+
+        await genreModel.findByIdAndUpdate(id, updateData);
 
         res.json({ success: true, message: "Genre updated successfully" });
     } catch (error) {
