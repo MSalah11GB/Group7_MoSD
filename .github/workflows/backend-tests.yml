@@ -5,10 +5,12 @@ on:
     branches: [ "main", "test_cicd", "staging" ]
     paths:
       - 'spotify-backend/**'
+      - 'spotify-admin/**'
   pull_request:
     branches: [ "main", "test_cicd", "staging" ]
     paths:
       - 'spotify-backend/**'
+      - 'spotify-admin/**'
 
 jobs:
   backend-tests:
