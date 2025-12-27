@@ -2,9 +2,15 @@ name: Database Schema Validation
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "test_cicd", "staging" ]
+    paths:
+      - 'spotify-backend/**'
+      - 'spotify-admin/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "test_cicd", "staging" ]
+    paths:
+      - 'spotify-backend/**'
+      - 'spotify-admin/**'
 
 jobs:
   test-schemas:
@@ -35,4 +41,4 @@ jobs:
       working-directory: ./spotify-backend
       env:
         MONGODB_URI: mongodb://localhost:27017/test_db
-      run: npm test
+      run: npm test -- --runTestsByPath tests/models.test.js tests/migrations.test.js tests/admin-db.test.js

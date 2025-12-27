@@ -1,8 +1,10 @@
 import { createContext, useEffect, useRef, useState, useCallback } from "react";
 import axios from 'axios';
+import { fetchAndParseLRC } from "../utils/lrcParser";
 
 export const PlayerContext = createContext();
 
+const url = "https://musicify-backend-2.onrender.com/";
 const LOOP_MODE = {
     NO_LOOP: 0, // Song plays once, then stops
     LOOP_ONE: 1, // Song plays twice, then stops
@@ -10,7 +12,6 @@ const LOOP_MODE = {
 };
 
 const PlayerContextProvider = (props) => {
-    const url = 'http://localhost:4000';
     const audioRef = useRef();
     const seekBar = useRef();
     const seekBg = useRef();
@@ -20,15 +21,21 @@ const PlayerContextProvider = (props) => {
     const [playStatus, setPlayStatus] = useState(false);
     const [loopMode, setLoopMode] = useState(LOOP_MODE.NO_LOOP);
     const [loopCount, setLoopCount] = useState(0);
+    const [currentLyrics, setCurrentLyrics] = useState([]);
+    const [activeLyricIndex, setActiveLyricIndex] = useState(-1);
+    const [showLyrics, setShowLyrics] = useState(false);
     const [shuffleMode, setShuffleMode] = useState(false);
     const [volume, setVolume] = useState(0.5);
     const [isMuted, setIsMuted] = useState(false);
     const [previousVolume, setPreviousVolume] = useState(1);
+    const [currentLyricsSource, setCurrentLyricsSource] = useState('');
     const [time, setTime] = useState({
         currentTime: { second: 0, minute: 0 },
         totalTime: { second: 0, minute: 0 }
     });
     const [playOnLoad, setPlayOnLoad] = useState(false);
+    const [showFullscreen, setShowFullscreen] = useState(false);
+    const [showQueue, setShowQueue] = useState(false);
     useEffect(() => {
         // Initialize audio element properties when component mounts
         const audio = audioRef.current;
@@ -68,8 +75,7 @@ const PlayerContextProvider = (props) => {
                 const volumeToRestore = previousVolume > 0 ? previousVolume : 0.5;
                 setVolume(volumeToRestore);
                 audioRef.current.volume = volumeToRestore;
-            }
-            // If volume > 0, it's already set by the slider/changeVolume, no need to change here.
+            } // If volume > 0, it's already set by the slider/changeVolume, no need to change here.
         }
     }, [volume, previousVolume, setIsMuted, setVolume]);
 
@@ -199,10 +205,66 @@ const PlayerContextProvider = (props) => {
         setPlayOnLoad(true);
     }
 
+    // Toggle browser fullscreen mode
+    const toggleBrowserFullscreen = async () => {
+        if (!document.fullscreenElement) {
+            try {
+                await document.documentElement.requestFullscreen();
+            } catch (err) {
+                console.error("Fullscreen error:", err);
+            }
+        } else await document.exitFullscreen();
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setShowFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+        return () =>
+            document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    }, []);
+
+    // Toggle the Queue view
+    const toggleQueue = () => {
+        setShowQueue(prev => !prev);
+    };
+
     // Effect to handle track changes: update src, load, and play if intended
     useEffect(() => {
         if (track && track.file) { // track.file should be the audio URL
             const audio = audioRef.current;
+
+            const fetchLyrics = async () => {
+                if (track.lrcFile) {
+                    try {
+                        // Show loading state only if we're fetching new lyrics
+                        if (track.lrcFile !== currentLyricsSource) {
+                            setCurrentLyrics([]);
+                            setActiveLyricIndex(-1);
+
+                            const parsedLyrics = await fetchAndParseLRC(track.lrcFile);
+                            if (parsedLyrics.length > 0) {
+                                setCurrentLyrics(parsedLyrics);
+                                setCurrentLyricsSource(track.lrcFile);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error loading lyrics:", error);
+                    }
+                } else {
+                    // Only clear lyrics if we had some before
+                    if (currentLyrics.length > 0) {
+                        setCurrentLyrics([]);
+                        setActiveLyricIndex(-1);
+                        setCurrentLyricsSource('');
+                    }
+                }
+            };
+
+            fetchLyrics();
+
             const handleLoadedMetadata = () => {
                 setTime(prev => ({
                     ...prev,
@@ -225,6 +287,20 @@ const PlayerContextProvider = (props) => {
                         minute: Math.floor(audio.currentTime / 60)
                     }
                 }));
+                const currentTimeMs = audio.currentTime * 1000;
+                if (currentLyrics.length > 0) {
+                    let newActiveIndex = -1;
+                    for (let i = 0; i < currentLyrics.length; i++) {
+                        if (currentLyrics[i].time <= currentTimeMs) {
+                            newActiveIndex = i;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (newActiveIndex !== activeLyricIndex) {
+                        setActiveLyricIndex(newActiveIndex);
+                    }
+                }
             };
             
             // Event listener for when the song ends
@@ -300,7 +376,13 @@ const PlayerContextProvider = (props) => {
                 audio.removeEventListener('canplaythrough', handleCanPlay);
             };
         }
-    }, [track, playOnLoad, loopMode, loopCount, volume, isMuted]); // Rerun when track or playOnLoad changes
+    }, [track, playOnLoad, loopMode, loopCount, activeLyricIndex, currentLyrics.length, volume, isMuted, currentLyricsSource]); // Rerun when track or playOnLoad changes
+
+    const toggleLyrics = () => {
+        if (currentLyrics && currentLyrics.length > 0) {
+            setShowLyrics(prev => !prev);
+        }
+    };
 
     const contextValue = {
         audioRef,
@@ -311,12 +393,17 @@ const PlayerContextProvider = (props) => {
         time, setTime,
         play, pause,
         playWithId,
+        currentLyrics, activeLyricIndex, 
+        showLyrics, setShowLyrics, toggleLyrics,
         previousSong, nextSong, seekSong,
         songsData, albumsData,
+        setPlayOnLoad,
         loopMode, toggleLoopMode, LOOP_MODE,
         shuffleMode, toggleShuffleMode,
         volume, changeVolume,
-        isMuted, toggleMute
+        isMuted, toggleMute,
+        showFullscreen, toggleBrowserFullscreen,
+        showQueue, setShowQueue, toggleQueue,
     }
 
     return (

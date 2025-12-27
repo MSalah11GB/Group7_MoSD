@@ -12,10 +12,8 @@ const playlistSchema = new mongoose.Schema({
     updatedAt: {type: Date, default: Date.now}
 });
 
-// Update the updatedAt timestamp before saving
-playlistSchema.pre('save', function(next) {
+playlistSchema.pre('save', function () {
     this.updatedAt = Date.now();
-    next();
 });
 
 const playlistModel = mongoose.models.playlist || mongoose.model("playlist", playlistSchema);
