@@ -3,8 +3,12 @@ name: Backend Unit Tests
 on:
   push:
     branches: [ "main", "test_cicd", "staging" ]
+    paths:
+      - 'spotify-backend/**'
   pull_request:
     branches: [ "main", "test_cicd", "staging" ]
+    paths:
+      - 'spotify-backend/**'
 
 jobs:
   backend-tests:
