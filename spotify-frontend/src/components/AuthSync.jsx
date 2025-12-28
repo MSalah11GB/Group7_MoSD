@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { API_BASE_URL } from '../config/api';
 
 const AuthSync = () => {
     const { user, isLoaded } = useUser();
@@ -9,7 +10,7 @@ const AuthSync = () => {
             if (!user || !isLoaded) return;
 
             try {
-                const response = await fetch('http://localhost:4000/api/auth/callback', {
+                const response = await fetch(`${API_BASE_URL}/api/auth/callback`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

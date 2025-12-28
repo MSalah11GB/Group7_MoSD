@@ -8,21 +8,23 @@ const QueueSidebar = () => {
         playStatus,
         play,
         pause,
-        playWithId,
         songsData,
-        setShowQueue
+        setShowQueue,
+        queue,
+        playFromQueueAt,
+        clearQueue
     } = useContext(PlayerContext);
-
-    // Find the current track index
-    const currentIndex = songsData.findIndex(item => item._id === track._id);
 
     // Close the Queue sidebar
     const handleClose = () => {
         setShowQueue(false);
     };
 
-    // Get the upcoming songs (songs after the current one)
-    const upcomingSongs = currentIndex !== -1 ? songsData.slice(currentIndex + 1) : [];
+    const queuedSongs = Array.isArray(queue)
+        ? queue
+            .map((id) => songsData.find((s) => s._id === id))
+            .filter(Boolean)
+        : [];
 
     if (!track) return null;
 
@@ -61,13 +63,22 @@ const QueueSidebar = () => {
         {/* Queue List */}
         <div className="flex-1 overflow-auto">
             <h2 className="text-sm text-gray-400 mb-3">Next In Queue</h2>
-            {upcomingSongs.length > 0 ? (
+            {queuedSongs.length > 0 ? (
             <div className="flex flex-col gap-2">
-                {upcomingSongs.map((song, index) => (
+                <div className="flex justify-end mb-1">
+                    <button
+                        onClick={clearQueue}
+                        className="text-xs text-gray-400 hover:text-white"
+                        type="button"
+                    >
+                        Clear
+                    </button>
+                </div>
+                {queuedSongs.map((song, index) => (
                 <div
                     key={song._id}
                     className="flex items-center gap-3 p-2 rounded hover:bg-[#ffffff1a] cursor-pointer"
-                    onClick={() => playWithId(song._id)}
+                    onClick={() => playFromQueueAt(index)}
                 >
                     <img
                     src={song.image}

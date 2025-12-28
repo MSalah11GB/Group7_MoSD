@@ -1,9 +1,33 @@
-import React from 'react'
+import React, { useContext, useMemo } from 'react'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
 import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/clerk-react"
-const Navbar = () => {
+import { PlayerContext } from '../context/PlayerContext'
+
+const Navbar = ({ selectedGenreId = null, onSelectGenre }) => {
     const navigate = useNavigate()
+    const { genresData = [] } = useContext(PlayerContext);
+
+    const topGenres = useMemo(() => {
+        if (!Array.isArray(genresData)) return [];
+        return [...genresData]
+            .filter(g => g && g._id && g.name)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .slice(0, 3);
+    }, [genresData]);
+
+    const pillBase = 'px-4 py-1 rounded-2xl cursor-pointer';
+    const pillSelected = 'bg-white text-black';
+    const pillUnselected = 'bg-black text-white';
+
+    const handleSelectAll = () => {
+        if (typeof onSelectGenre === 'function') onSelectGenre(null);
+    };
+
+    const handleSelectGenre = (genreId) => {
+        if (typeof onSelectGenre === 'function') onSelectGenre(genreId);
+    };
+
     return (
         <>
             <div className='w-full flex justify-between items-center font-semibold'>
@@ -12,8 +36,6 @@ const Navbar = () => {
                     <img onClick={()=>navigate(1)} className='w-8 bg-black p-1.5 rounded-2xl cursor-pointer hover:bg-gray-800 transition-colors' src={assets.arrow_right} alt="arrow_right" />
                 </div>
                 <div className='flex items-center gap-4'>
-                    <p className='bg-white text-black text-[15px] px-4 py-1 rounded-2xl hidden md:block cursor-pointer'>Explore Premium</p>
-                    <p className='bg-black py-1 px-3 rounded-2xl text-[15px] cursor-pointer'>Install App</p>
                     <div className='flex items-center gap-4'>
                     <SignedOut>
                         <SignInButton>
@@ -25,7 +47,7 @@ const Navbar = () => {
                     <SignedIn>
                         <UserButton 
                             signOutCallback={() => {
-                                router.replace("/");
+                                navigate('/');
                             }}
                             appearance={{
                                 elements: {
@@ -38,9 +60,22 @@ const Navbar = () => {
                 </div>
             </div>
             <div className='flex items-center gap-2 mt-4'>
-                <p className='bg-whte text-black px-4 py-1 rounded-2xl cursor-pointer'>All</p>
-                <p className='bg-black px-4 py-1 rounded-2xl cursor-pointer'>Music</p>
-                <p className='bg-black px-4 py-1 rounded-2xl cursor-pointer'>Podcast</p>
+                <p
+                    onClick={handleSelectAll}
+                    className={`${pillBase} ${selectedGenreId ? pillUnselected : pillSelected}`}
+                >
+                    All
+                </p>
+
+                {topGenres.map((genre) => (
+                    <p
+                        key={genre._id}
+                        onClick={() => handleSelectGenre(genre._id)}
+                        className={`${pillBase} ${selectedGenreId === genre._id ? pillSelected : pillUnselected}`}
+                    >
+                        {genre.name}
+                    </p>
+                ))}
             </div>
         </>
     )

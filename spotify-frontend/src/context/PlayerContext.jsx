@@ -1,10 +1,10 @@
 import { createContext, useEffect, useRef, useState, useCallback } from "react";
 import axios from 'axios';
 import { fetchAndParseLRC } from "../utils/lrcParser";
+import { API_BASE_URL } from "../config/api";
 
 export const PlayerContext = createContext();
 
-const url = "https://musicify-backend-2.onrender.com/";
 const LOOP_MODE = {
     NO_LOOP: 0, // Song plays once, then stops
     LOOP_ONE: 1, // Song plays twice, then stops
@@ -17,6 +17,8 @@ const PlayerContextProvider = (props) => {
     const seekBg = useRef();
     const [songsData, setSongsData] = useState([]);
     const [albumsData, setAlbumsData] = useState([]);
+    const [artistsData, setArtistsData] = useState([]);
+    const [genresData, setGenresData] = useState([]);
     const [track, setTrack] = useState(songsData[0]);
     const [playStatus, setPlayStatus] = useState(false);
     const [loopMode, setLoopMode] = useState(LOOP_MODE.NO_LOOP);
@@ -36,6 +38,34 @@ const PlayerContextProvider = (props) => {
     const [playOnLoad, setPlayOnLoad] = useState(false);
     const [showFullscreen, setShowFullscreen] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
+    // Playback navigation
+    const [queue, setQueue] = useState([]); // array of songIds
+    const [history, setHistory] = useState([]); // stack of songIds
+
+    const findCurrentTrackIndex = useCallback(() => {
+        if (!track || !track._id) return -1;
+        return songsData.findIndex(item => item._id === track._id);
+    }, [songsData, track]);
+
+    const resolveSongById = useCallback((id) => {
+        if (!id) return null;
+        return songsData.find(item => item._id === id) || null;
+    }, [songsData]);
+
+    const playTrackById = useCallback((id, options = {}) => {
+        const { pushHistory = true } = options;
+        const selectedTrack = resolveSongById(id);
+        if (!selectedTrack) return false;
+
+        if (pushHistory && track && track._id && track._id !== selectedTrack._id) {
+            setHistory(prev => [...prev, track._id]);
+        }
+
+        setTrack(selectedTrack);
+        setPlayOnLoad(true);
+        setLoopCount(0);
+        return true;
+    }, [resolveSongById, track]);
     useEffect(() => {
         // Initialize audio element properties when component mounts
         const audio = audioRef.current;
@@ -98,14 +128,14 @@ const PlayerContextProvider = (props) => {
     }, [audioRef])
 
     const play = async () => {
-        if (audioRef.current && audioRef.current.src && audioRef.current.paused) {
-            try {
-                await audioRef.current.play();
-                setPlayStatus(true);
-            } catch (error) {
-                console.error("Error in play function:", error);
-                setPlayStatus(false);
-            }
+        const audio = audioRef.current;
+        if (!audio || !audio.src) return;
+        try {
+            await audio.play();
+            setPlayStatus(true);
+        } catch (error) {
+            console.error("Error in play function:", error);
+            setPlayStatus(false);
         }
     }
 
@@ -129,39 +159,37 @@ const PlayerContextProvider = (props) => {
     }
 
     const playWithId = async (id) => {
-        const selectedTrack = songsData.find(item => item._id === id);
-        if (selectedTrack) {
-            if (track && track._id === selectedTrack._id && !audioRef.current.paused) {
-            } else if (track && track._id === selectedTrack._id && audioRef.current.paused) {
-                await play();
-            } else {
-                setTrack(selectedTrack);
-                setPlayOnLoad(true); 
-                setLoopCount(0); 
-            }
+        const selectedTrack = resolveSongById(id);
+        if (!selectedTrack) return;
+
+        // Same track: just resume if paused
+        if (track && track._id === selectedTrack._id) {
+            if (audioRef.current?.paused) await play();
+            return;
         }
+
+        playTrackById(selectedTrack._id, { pushHistory: true });
     }
 
     const previousSong = async () => {
-        const currentIndex = findCurrentTrackIndex();
-        if (currentIndex > 0) {
-            setTrack(songsData[currentIndex - 1]);
-            setPlayOnLoad(true);
-            setLoopCount(0);
-        }
+        // Spec: previous song is previous in history
+        setHistory(prevHistory => {
+            if (prevHistory.length === 0) return prevHistory;
+            const prevId = prevHistory[prevHistory.length - 1];
+            // Play without pushing current track back into history
+            playTrackById(prevId, { pushHistory: false });
+            return prevHistory.slice(0, -1);
+        });
     }
 
     const nextSong = async () => {
-        const currentIndex = findCurrentTrackIndex();
-        if (currentIndex < songsData.length - 1) {
-            setTrack(songsData[currentIndex + 1]);
-            setPlayOnLoad(true);
-            setLoopCount(0);
-        } else if (loopMode === LOOP_MODE.LOOP_ALL && songsData.length > 0) { // Loop back to first song if LOOP_ALL
-            setTrack(songsData[0]);
-            setPlayOnLoad(true);
-            setLoopCount(0);
-        }
+        // Spec: next song is based on the queue
+        setQueue(prevQueue => {
+            if (prevQueue.length === 0) return prevQueue;
+            const [nextId, ...rest] = prevQueue;
+            playTrackById(nextId, { pushHistory: true });
+            return rest;
+        });
     }
 
     const seekSong = async (e) => {
@@ -170,7 +198,7 @@ const PlayerContextProvider = (props) => {
 
     const getSongsData = async () => {
         try {
-            const response = await axios.get(`${url}/api/song/list`);
+            const response = await axios.get(`${API_BASE_URL}/api/song/list`);
             setSongsData(response.data.songs);
             setTrack(response.data.songs[0]);
         } catch (error) {
@@ -180,16 +208,36 @@ const PlayerContextProvider = (props) => {
 
     const getAlbumsData = async () => {
         try {
-            const response = await axios.get(`${url}/api/album/list`);
+            const response = await axios.get(`${API_BASE_URL}/api/album/list`);
             setAlbumsData(response.data.albums);
         } catch (error) {
             console.log('error getSongsData', error);
         }
     }
 
+    const getArtistsData = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/artist/list`);
+            setArtistsData(response.data.artists || []);
+        } catch (error) {
+            console.log('error getArtistsData', error);
+        }
+    }
+
+    const getGenresData = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/genre/list`);
+            setGenresData(response.data.genres || []);
+        } catch (error) {
+            console.log('error getGenresData', error);
+        }
+    }
+
     useEffect(() => {
         getAlbumsData();
         getSongsData();
+        getArtistsData();
+        getGenresData();
     }, [])
 
     const playRandomSong = async () => {
@@ -201,9 +249,29 @@ const PlayerContextProvider = (props) => {
             randomIndex = Math.floor(Math.random() * songsData.length);
         } while (randomIndex === currentIndex);
         
-        setTrack(songsData[randomIndex]);
-        setPlayOnLoad(true);
+        playTrackById(songsData[randomIndex]._id, { pushHistory: true });
     }
+
+    const addToQueue = (songId) => {
+        if (!songId) return;
+        setQueue(prev => [...prev, songId]);
+    };
+
+    const setQueueFromSongs = (songIds = []) => {
+        setQueue(Array.isArray(songIds) ? songIds.filter(Boolean) : []);
+    };
+
+    const clearQueue = () => setQueue([]);
+
+    const playFromQueueAt = (index) => {
+        setQueue(prev => {
+            if (!Array.isArray(prev) || index < 0 || index >= prev.length) return prev;
+            const songId = prev[index];
+            const rest = prev.filter((_, i) => i !== index);
+            playTrackById(songId, { pushHistory: true });
+            return rest;
+        });
+    };
 
     // Toggle browser fullscreen mode
     const toggleBrowserFullscreen = async () => {
@@ -317,16 +385,26 @@ const PlayerContextProvider = (props) => {
                         }
                         break;
                     case LOOP_MODE.LOOP_ALL:
-                        audio.currentTime = 0;
-                        await play();
+                        // If the user has an explicit queue, consume it first.
+                        // Otherwise loop through the library order.
+                        if (queue.length > 0) {
+                            await nextSong();
+                        } else {
+                            const currentIndex = findCurrentTrackIndex();
+                            if (songsData.length > 0) {
+                                const nextIndex = currentIndex >= 0 && currentIndex < songsData.length - 1 ? currentIndex + 1 : 0;
+                                playTrackById(songsData[nextIndex]._id, { pushHistory: true });
+                            }
+                        }
                         break;
                     case LOOP_MODE.NO_LOOP:
                     default:
                         setPlayStatus(false);
                         setActiveLyricIndex(-1);
-                        if (hasNext) {
-                            if (shuffleMode) await playRandomSong();
-                            else await next();
+                        if (queue.length > 0) {
+                            await nextSong();
+                        } else if (shuffleMode) {
+                            await playRandomSong();
                         }
                         break;
                 }
@@ -350,7 +428,7 @@ const PlayerContextProvider = (props) => {
             audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
             audio.removeEventListener('timeupdate', handleTimeUpdate);
             audio.removeEventListener('ended', handleSongEnd);
-            audio.removeEventListener('canplaythrough', handleCanPlay); // or 'canplay'
+            audio.removeEventListener('canplay', handleCanPlay);
 
             // Set new source and load
             if (audio.src !== track.file) { // Only update if src is different
@@ -362,10 +440,11 @@ const PlayerContextProvider = (props) => {
             audio.addEventListener('loadedmetadata', handleLoadedMetadata);
             audio.addEventListener('timeupdate', handleTimeUpdate);
             audio.addEventListener('ended', handleSongEnd);
-            audio.addEventListener('canplaythrough', handleCanPlay); // or 'canplay'
+            audio.addEventListener('canplay', handleCanPlay);
 
-            if (playOnLoad && audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-                 handleCanPlay();
+            if (playOnLoad) {
+                // Try immediately (best-effort). If not ready, 'canplay' will fire later.
+                setTimeout(() => handleCanPlay(), 0);
             }
 
             // Cleanup function for when the component unmounts or track changes again
@@ -373,10 +452,10 @@ const PlayerContextProvider = (props) => {
                 audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
                 audio.removeEventListener('timeupdate', handleTimeUpdate);
                 audio.removeEventListener('ended', handleSongEnd);
-                audio.removeEventListener('canplaythrough', handleCanPlay);
+                audio.removeEventListener('canplay', handleCanPlay);
             };
         }
-    }, [track, playOnLoad, loopMode, loopCount, activeLyricIndex, currentLyrics.length, volume, isMuted, currentLyricsSource]); // Rerun when track or playOnLoad changes
+    }, [track, playOnLoad, loopMode, loopCount, activeLyricIndex, currentLyrics.length, volume, isMuted, currentLyricsSource, shuffleMode, findCurrentTrackIndex, playRandomSong, nextSong]); // Rerun when track or playOnLoad changes
 
     const toggleLyrics = () => {
         if (currentLyrics && currentLyrics.length > 0) {
@@ -393,10 +472,12 @@ const PlayerContextProvider = (props) => {
         time, setTime,
         play, pause,
         playWithId,
+        playTrackById,
         currentLyrics, activeLyricIndex, 
         showLyrics, setShowLyrics, toggleLyrics,
         previousSong, nextSong, seekSong,
         songsData, albumsData,
+        artistsData, genresData,
         setPlayOnLoad,
         loopMode, toggleLoopMode, LOOP_MODE,
         shuffleMode, toggleShuffleMode,
@@ -404,6 +485,8 @@ const PlayerContextProvider = (props) => {
         isMuted, toggleMute,
         showFullscreen, toggleBrowserFullscreen,
         showQueue, setShowQueue, toggleQueue,
+        queue, setQueueFromSongs, addToQueue, clearQueue, playFromQueueAt,
+        history,
     }
 
     return (
