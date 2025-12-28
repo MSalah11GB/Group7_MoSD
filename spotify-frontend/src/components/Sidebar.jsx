@@ -59,19 +59,15 @@ const Sidebar = () => {
     // Close search results when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (searchRef.current && !searchRef.current.contains(event.target)) {
-                setIsSearchActive(false);
-				setSearchTerm('');
-				setSearchResults([]);
-				setShowSearchResults(false);
-            }
+			if (searchRef.current && !searchRef.current.contains(event.target)) {
+				setIsSearchActive(false);
+			}
         };
 
-		if (isSearchActive) document.addEventListener('mousedown', handleClickOutside);
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isSearchActive])
+		if (!isSearchActive) return;
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isSearchActive]);
 
   	return (
 		<div className='w-[25%] h-full p-2 flex-col gap-2 text-white hidden lg:flex'>
@@ -89,7 +85,9 @@ const Sidebar = () => {
 				)}
 				
 				{isSearchActive && (
-                <Search onClose={() => setIsSearchActive(false)} />
+					<div ref={searchRef}>
+						<Search onClose={() => setIsSearchActive(false)} />
+					</div>
                 )}
 
 			</div>
@@ -102,7 +100,16 @@ const Sidebar = () => {
 				</div>
 				<div className='flex items-center gap-3'>
 					<img className='w-5' src={assets.arrow_icon} alt="" />
-					<img className='w-5' src={assets.plus_icon} alt="" />
+					<button
+						type='button'
+						onClick={handleCreatePlaylist}
+						className='cursor-pointer'
+						aria-label='Create playlist'
+						disabled={!user}
+						title={!user ? 'Sign in to create a playlist' : 'Create playlist'}
+					>
+						<img className='w-5' src={assets.plus_icon} alt="" />
+					</button>
 				</div>
 				</div>
 

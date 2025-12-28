@@ -5,8 +5,7 @@ import { PlaylistContext } from '../context/PlaylistContext';
 import { useUser } from '@clerk/clerk-react';
 //import { assets } from '../assets/assets';
 import axios from 'axios';
-
-const url = 'http://localhost:4000';
+import { API_BASE_URL } from '../config/api';
 
 const PlaylistManagement = ({ playlistId, onClose }) => {
     const { user } = useUser();
@@ -91,7 +90,7 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
 
         // Save the new order to the backend
         try {
-        await axios.post(`${url}/api/playlist/reorder-songs`, {
+        await axios.post(`${API_BASE_URL}/api/playlist/reorder-songs`, {
             playlistId,
             songIds: items.map(song => song._id),
             clerkId: user?.id || ''
@@ -154,7 +153,7 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
             formData.append('image', playlistDetails.image);
         }
 
-        const response = await axios.post(`${url}/api/playlist/update`, formData, {
+        const response = await axios.post(`${API_BASE_URL}/api/playlist/update`, formData, {
             headers: {
             'Content-Type': 'multipart/form-data'
             }
@@ -208,14 +207,14 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         formData.append('description', playlistDetails.description);
         formData.append('clerkId', user?.id || '');
 
-        const response = await axios.post(`${url}/api/playlist/create`, formData);
+        const response = await axios.post(`${API_BASE_URL}/api/playlist/create`, formData);
 
         if (response.data.success) {
             const newPlaylistId = response.data.playlist._id;
 
             // Add all songs to the new playlist
             for (const song of songs) {
-            await axios.post(`${url}/api/playlist/add-song`, {
+            await axios.post(`${API_BASE_URL}/api/playlist/add-song`, {
                 playlistId: newPlaylistId,
                 songId: song._id,
                 clerkId: user?.id || ''

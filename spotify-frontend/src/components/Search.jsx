@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { assets } from '../assets/assets';
 import { PlayerContext } from '../context/PlayerContext';
+import { API_BASE_URL } from '../config/api';
 
 const Search = ({ onClose }) => {
     const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Search = ({ onClose }) => {
 
             // Album search
             const albumResponse = await axios.get(
-                `http://localhost:4000/api/album/list?search=${encodeURIComponent(term)}`
+                `${API_BASE_URL}/api/album/list?search=${encodeURIComponent(term)}`
             );
 
             if (albumResponse.data?.success) {

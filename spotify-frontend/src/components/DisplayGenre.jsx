@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { PlayerContext } from '../context/PlayerContext';
 import { assets } from '../assets/assets';
+import { API_BASE_URL } from '../config/api';
 
 const DisplayGenre = () => {
     const { genreId } = useParams();
     const { playWithId, songsData, genresData, artistsData } = useContext(PlayerContext);
-    const url = 'http://localhost:4000';
     const [genreSongs, setGenreSongs] = useState([]);
     const [genre, setGenre] = useState(null);
     const [songsByArtist, setSongsByArtist] = useState({});
@@ -28,7 +28,7 @@ const DisplayGenre = () => {
         if (genre) {
           try {
             // Fetch the genre with its songList populated
-            const response = await axios.get(`${url}/api/genre/list`, {
+            const response = await axios.get(`${API_BASE_URL}/api/genre/list`, {
               params: {
                 includeSongs: 'true',
                 id: genreId
@@ -142,7 +142,7 @@ const DisplayGenre = () => {
       };
 
       fetchGenreSongs();
-    }, [genre, genreId, songsData, url]);
+    }, [genre, genreId, songsData]);
 
     // Calculate total duration of songs
     const calculateTotalDuration = (songs) => {

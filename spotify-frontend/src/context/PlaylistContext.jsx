@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from 'axios';
 import { PlayerContext } from "./PlayerContext";
+import { API_BASE_URL } from "../config/api";
 
 export const PlaylistContext = createContext();
 
-const url = "https://musicify-backend-2.onrender.com/";
 const PlaylistContextProvider = (props) => {
 
     const [currentPlaylist, setCurrentPlaylist] = useState(null);
@@ -24,7 +24,7 @@ const PlaylistContextProvider = (props) => {
                 formData.append('image', imageFile);
             }
 
-            const response = await axios.post(`${url}/api/playlist/create`, formData, {
+            const response = await axios.post(`${API_BASE_URL}/api/playlist/create`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -33,7 +33,7 @@ const PlaylistContextProvider = (props) => {
             if (response.data.success) {
                 console.log('Playlist created successfully, refreshing playlist data...');
                 // Refresh playlists data
-                const playlistsResponse = await axios.get(`${url}/api/playlist/list`);
+                const playlistsResponse = await axios.get(`${API_BASE_URL}/api/playlist/list`);
                 if (playlistsResponse.data.success) {
                     console.log('Refreshed playlists:', playlistsResponse.data.playlists);
                     setPlaylistsData(playlistsResponse.data.playlists);
@@ -54,7 +54,7 @@ const PlaylistContextProvider = (props) => {
         try {
             console.log(`[PlayerContext] Loading playlist ${playlistId}`);
 
-            const response = await axios.get(`${url}/api/playlist/get`, {
+            const response = await axios.get(`${API_BASE_URL}/api/playlist/get`, {
                 params: {
                     id: playlistId,
                     clerkId: clerkId
@@ -82,7 +82,7 @@ const PlaylistContextProvider = (props) => {
 
     const addSongToPlaylist = async (playlistId, songId, clerkId = '') => {
         try {
-            const response = await axios.post(`${url}/api/playlist/add-song`, {
+            const response = await axios.post(`${API_BASE_URL}/api/playlist/add-song`, {
                 playlistId: playlistId,
                 songId: songId,
                 clerkId: clerkId
@@ -95,7 +95,7 @@ const PlaylistContextProvider = (props) => {
                 }
 
                 // Refresh playlists data
-                const playlistsResponse = await axios.get(`${url}/api/playlist/list`);
+                const playlistsResponse = await axios.get(`${API_BASE_URL}/api/playlist/list`);
                 if (playlistsResponse.data.success) {
                     setPlaylistsData(playlistsResponse.data.playlists);
                 }
@@ -125,7 +125,7 @@ const PlaylistContextProvider = (props) => {
         }
 
         // Send remove request to backend in background (fire-and-forget)
-        axios.post(`${url}/api/playlist/remove-song`, {
+        axios.post(`${API_BASE_URL}/api/playlist/remove-song`, {
             playlistId: playlistId,
             songId: songId,
             clerkId: clerkId
@@ -133,7 +133,7 @@ const PlaylistContextProvider = (props) => {
             if (response.data.success) {
                 console.log('Song removed successfully from backend');
                 // Refresh playlists data to keep sidebar in sync
-                axios.get(`${url}/api/playlist/list`).then(playlistsResponse => {
+                axios.get(`${API_BASE_URL}/api/playlist/list`).then(playlistsResponse => {
                     if (playlistsResponse.data.success) {
                         setPlaylistsData(playlistsResponse.data.playlists);
                     }
@@ -167,7 +167,7 @@ const PlaylistContextProvider = (props) => {
         console.log('Optimistically removed playlist from UI, sending delete request in background...');
 
         // Send delete request to backend in background (fire-and-forget)
-        axios.post(`${url}/api/playlist/delete`, {
+        axios.post(`${API_BASE_URL}/api/playlist/delete`, {
             id: playlistId,
             clerkId: clerkId
         }).then(response => {
@@ -182,7 +182,7 @@ const PlaylistContextProvider = (props) => {
             // REVERT: Network error, restore the playlist in UI
             console.error('Network error during delete, reverting UI:', error);
             // Restore original state by re-fetching (safest approach)
-            axios.get(`${url}/api/playlist/list`).then(playlistsResponse => {
+            axios.get(`${API_BASE_URL}/api/playlist/list`).then(playlistsResponse => {
                 if (playlistsResponse.data.success) {
                     setPlaylistsData(playlistsResponse.data.playlists);
                 }
@@ -218,7 +218,7 @@ const PlaylistContextProvider = (props) => {
     useEffect(() => {
         const getPlaylists = async () => {
             try {
-                const response = await axios.get(`${url}/api/playlist/list`);
+                const response = await axios.get(`${API_BASE_URL}/api/playlist/list`);
                 if (response.data.success) {
                     //console.log('Initial playlists loaded:', response.data.playlists);
                     setPlaylistsData(response.data.playlists);
@@ -228,7 +228,7 @@ const PlaylistContextProvider = (props) => {
             }
         };
         getPlaylists();
-    }, [url]);
+    }, [API_BASE_URL]);
     
     const contextValue = {
         playlistsData, setPlaylistsData,
