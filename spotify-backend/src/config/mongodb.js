@@ -41,6 +41,17 @@ export const listDbSongs = async () => {
         .toArray();
 };
 
+export const countDbSongs = async () => {
+    if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
+        throw new Error('MongoDB is not connected');
+    }
+
+    const collectionNames = await listDbCollections();
+    if (!collectionNames.includes('songs')) return 0;
+
+    return mongoose.connection.db.collection('songs').countDocuments({});
+};
+
 export const getDbInfo = async () => {
     if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) {
         throw new Error('MongoDB is not connected');
