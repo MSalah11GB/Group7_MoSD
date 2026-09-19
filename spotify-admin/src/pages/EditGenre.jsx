@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
 
 const EditGenre = () => {

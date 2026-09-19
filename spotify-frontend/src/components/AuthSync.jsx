@@ -1,50 +1,27 @@
 import { useEffect } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
+import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
+import { setTokenGetter } from '../config/authToken';
 
+/** Gives API requests the Clerk session token and mirrors the signed-in user into the backend. */
 const AuthSync = () => {
-    const { user, isLoaded } = useUser();
+    const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+
+    // Signed-out visitors (and a Clerk that has not loaded) get no token, and no waiting for one.
+    useEffect(() => {
+        setTokenGetter(isSignedIn ? getToken : null);
+    }, [getToken, isSignedIn]);
 
     useEffect(() => {
-        const syncUserWithBackend = async () => {
-            if (!user || !isLoaded) return;
+        if (!isLoaded || !isSignedIn) return;
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/callback`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // Add these headers to help with CORS
-                        'Accept': 'application/json',
-                    },
-                    // Don't include credentials for this request
-                    credentials: 'omit',
-                    body: JSON.stringify({
-                        id: user.id,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        imageUrl: user.imageUrl
-                    }),
-                });
+        axios.post(`${API_BASE_URL}/api/auth/sync`).catch((error) => {
+            console.warn('Error syncing user with backend:', error.message);
+        });
+    }, [isLoaded, isSignedIn, userId]);
 
-                if (!response.ok) {
-                    console.warn('Failed to sync user with backend:', response.status);
-                    return;
-                }
-
-                await response.json();
-            } catch (error) {
-                // Log error but don't disrupt the user experience
-                console.warn('Error syncing user with backend:', error);
-            }
-        };
-
-        // Add a small delay to avoid race conditions with Clerk initialization
-        const timeoutId = setTimeout(syncUserWithBackend, 1000);
-        return () => clearTimeout(timeoutId);
-    }, [user, isLoaded]);
-
-    return null; // This component doesn't render anything
+    return null;
 };
 
 export default AuthSync;

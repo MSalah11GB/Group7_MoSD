@@ -1,66 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
+import { useCatalogList } from '../hooks/useCatalog';
+import { errorMessage } from '../utils/errors';
 import { FaSearch, FaTrash, FaEdit } from 'react-icons/fa';
 
 const ListArtist = () => {
-    const [data, setData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
     const navigate = useNavigate();
-
-    const fetchArtists = async (search = '') => {
-        try {
-            const response = await axios.get(`${url}/api/artist/list`, {
-                params: { search }
-            });
-
-            if (response.data.success) {
-                setData(response.data.artists);
-            }
-        } catch (error) {
-            toast.error('Error occurred');
-        }
-    }
+    const queryClient = useQueryClient();
+    const { data } = useCatalogList('artist', appliedSearch);
 
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchArtists(searchTerm);
+        setAppliedSearch(searchTerm.trim());
     }
 
     const removeArtist = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this artist?")) return;
+
         try {
-            if (!window.confirm("Are you sure you want to delete this artist?")) {
-                return;
-            }
-        
-        console.log(`Attempting to delete artist with ID: ${id}`);
-        const response = await axios.post(`${url}/api/artist/remove`, {id});
+            const response = await axios.post(`${url}/api/artist/remove`, {id});
 
-        console.log('Response from server:', response.data);
-
-        if (response.data.success) {
-            toast.success(response.data.message);
-            await fetchArtists();
-        } else {
-            // Check if the artist has songs
-            if (response.data.hasSongs) {
-                console.log(`Artist has ${response.data.songCount} songs, cannot delete`);
+            if (response.data.success) {
+                toast.success(response.data.message);
+                await queryClient.invalidateQueries({ queryKey: ['artist'] });
+            } else if (response.data.hasSongs) {
                 toast.error(`Cannot delete artist because they have ${response.data.songCount} song(s) in the system. Please delete those songs first.`);
             } else {
                 toast.error(response.data.message || "Failed to delete artist");
             }
-        }
         } catch (error) {
-            console.error("Error deleting artist:", error);
-            toast.error("Error occurred");
+            toast.error(errorMessage(error));
         }
     }
-
-    useEffect(() => {
-        fetchArtists();
-    }, [])
 
     return (
         <div>

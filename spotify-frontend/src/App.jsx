@@ -1,25 +1,43 @@
-import { useContext, useState } from 'react'
+import { useContext } from 'react'
 import Sidebar from './components/Sidebar'
 import Player from './components/Player'
 import Display from './components/Display'
 import QueueSidebar from './components/QueueSidebar'
+import StatusMessage from './components/StatusMessage'
 import { PlayerContext } from './context/PlayerContext'
 
 const App = () => {
-    const {audioRef, track, songsData, showQueue} = useContext(PlayerContext);
+    const { showQueue, libraryStatus } = useContext(PlayerContext);
+
+    if (libraryStatus.isLoading) {
+        return (
+            <div className='h-screen bg-black'>
+                <StatusMessage title='Loading music...' />
+            </div>
+        );
+    }
+
+    if (libraryStatus.isError) {
+        return (
+            <div className='h-screen bg-black'>
+                <StatusMessage
+                    title="Couldn't load the music library"
+                    action={{ label: 'Try again', onClick: () => libraryStatus.refetch() }}
+                >
+                    Check your connection and that the server is running.
+                </StatusMessage>
+            </div>
+        );
+    }
 
     return (
         <div className='h-screen bg-black'>
-            {songsData.length !== 0 ? <>
-                <div className="h-[90%] flex">
-                    <Sidebar />
-                    <Display />
-                    {showQueue && <QueueSidebar />}
-                </div>
-                <Player />
-            </>
-            : null}
-        <audio ref={audioRef} src={track ? track.file : ""} preload='none'></audio>
+            <div className="h-[90%] flex">
+                <Sidebar />
+                <Display />
+                {showQueue && <QueueSidebar />}
+            </div>
+            <Player />
         </div>
     )
 }

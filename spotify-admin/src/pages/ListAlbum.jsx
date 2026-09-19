@@ -1,33 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
-import { assets } from '../assets/assets';
+import { useCatalogList } from '../hooks/useCatalog';
+import { errorMessage } from '../utils/errors';
 import { FaSearch, FaTrash, FaEdit } from 'react-icons/fa';
 
 const ListAlbum = () => {
-    const [data, setData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [appliedSearch, setAppliedSearch] = useState('');
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [albumToDelete, setAlbumToDelete] = useState(null);
     const [songCount, setSongCount] = useState(0);
     const navigate = useNavigate();
-
-    const fetchAlbums = async (search = '') => {
-        try {
-            const response = await axios.get(`${url}/api/album/list`, {
-                params: { search }
-            });
-            if (response.data.success) setData(response.data.albums);
-        } catch (error) {
-          toast.error('Error occurred');
-        }
-    }
+    const queryClient = useQueryClient();
+    const { data } = useCatalogList('album', appliedSearch);
 
     const handleSearch = (e) => {
       e.preventDefault();
-      fetchAlbums(searchTerm);
+      setAppliedSearch(searchTerm.trim());
     }
 
     // Initial check before deleting album
@@ -53,7 +46,7 @@ const ListAlbum = () => {
         }
       } catch (error) {
         console.error("Error checking album:", error);
-        toast.error("Error occurred while checking album");
+        toast.error(errorMessage(error));
       }
     }
 
@@ -67,13 +60,13 @@ const ListAlbum = () => {
 
         if (response.data.success) {
           toast.success(response.data.message);
-          await fetchAlbums();
+          await queryClient.invalidateQueries({ queryKey: ['album'] });
         } else {
           toast.error(response.data.message || "Failed to delete album");
         }
       } catch (error) {
         console.error("Error deleting album:", error);
-        toast.error("Error occurred while deleting album");
+        toast.error(errorMessage(error));
       }
 
       // Close the confirmation dialog
@@ -86,10 +79,6 @@ const ListAlbum = () => {
       setShowConfirmation(false);
       setAlbumToDelete(null);
     }
-
-    useEffect(() => {
-      fetchAlbums();
-    },[])
 
     return (
       <div>

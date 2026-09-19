@@ -1,86 +1,36 @@
-import { useState, useEffect, useRef, useContext } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { assets } from '../assets/assets';
 import { PlayerContext } from '../context/PlayerContext';
-import { API_BASE_URL } from '../config/api';
+
+const MAX_RESULTS = 8;
+
+const matches = (term, ...fields) => fields.some((field) => field?.toLowerCase().includes(term));
 
 const Search = ({ onClose }) => {
     const navigate = useNavigate();
-    const { songsData, playWithId } = useContext(PlayerContext);
+    const { songsData, albumsData, playWithId } = useContext(PlayerContext);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [showSearchResults, setShowSearchResults] = useState(false);
-    const [loading, setLoading] = useState(false);
-
     const searchRef = useRef(null);
-    const debounceRef = useRef(null);
 
-    const performSearch = async (term) => {
-        if (!term.trim()) {
-            setSearchResults([]);
-            setShowSearchResults(false);
-            return;
-        }
+    // The whole library is already in memory, so results update as you type.
+    const searchResults = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return [];
 
-        setLoading(true);
-        setShowSearchResults(true);
+        const albums = albumsData
+            .filter((album) => matches(term, album.name, album.desc))
+            .map((album) => ({ _id: album._id, title: album.name, artist: '', type: 'album', image: album.image }));
 
-        try {
-            let results = [];
+        const songs = songsData
+            .filter((song) => matches(term, song.name, song.artistName, song.album))
+            .map((song) => ({ _id: song._id, title: song.name, artist: song.artistName, type: 'song', image: song.image }));
 
-            // Album search
-            const albumResponse = await axios.get(
-                `${API_BASE_URL}/api/album/list?search=${encodeURIComponent(term)}`
-            );
+        return [...albums, ...songs].slice(0, MAX_RESULTS);
+    }, [searchTerm, songsData, albumsData]);
 
-            if (albumResponse.data?.success) {
-                results.push(
-                    ...albumResponse.data.albums.map(album => ({
-                        _id: album._id,
-                        title: album.name,
-                        artist: album.artist || '',
-                        type: 'album',
-                        image: album.image
-                    }))
-                );
-            }
-
-            // Local song search
-            const filteredSongs = songsData.filter(song =>
-                song.name?.toLowerCase().includes(term.toLowerCase()) ||
-                song.artistName?.toLowerCase().includes(term.toLowerCase()) ||
-                song.album?.toLowerCase().includes(term.toLowerCase())
-            );
-
-            results.push(
-                ...filteredSongs.map(song => ({
-                    _id: song._id,
-                    title: song.name,
-                    artist: song.artistName,
-                    type: 'song',
-                    image: song.image
-                }))
-            );
-
-            setSearchResults(results.slice(0, 8));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleChange = (e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-
-        clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            performSearch(value);
-        }, 300);
-    };
+    const showSearchResults = searchTerm.trim() !== '';
 
     const handleResultClick = (item) => {
         if (item.type === 'song') playWithId(item._id);
@@ -104,18 +54,13 @@ const Search = ({ onClose }) => {
     return (
         <div ref={searchRef} className='relative px-4 mt-2'>
             <div className='relative'>
-                <input type="text" autoFocus value={searchTerm} onChange={handleChange}
+                <input type="text" autoFocus value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder='Search songs, artists, albums...'
                     className='w-full px-3 py-2 pl-10 bg-[#2a2a2a] text-white rounded-full'
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                     <img src={assets.search_icon} alt="Search" className="w-4 h-4 opacity-70" />
                 </div>
-                {loading && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                    </div>
-                )}
             </div>
 
             {showSearchResults && (
@@ -124,7 +69,7 @@ const Search = ({ onClose }) => {
                         <div className="py-2">
                             {searchResults.map(item => (
                                 <div
-                                    key={item._id}
+                                    key={`${item.type}-${item._id}`}
                                     className="flex items-center gap-3 px-3 py-2 hover:bg-[#3a3a3a] cursor-pointer"
                                     onClick={() => handleResultClick(item)}
                                 >
@@ -139,9 +84,7 @@ const Search = ({ onClose }) => {
                             ))}
                         </div>
                     ) : (
-                        <div className="py-4 text-center text-gray-400 text-sm">
-                            {loading ? 'Searching...' : 'No results found'}
-                        </div>
+                        <div className="py-4 text-center text-gray-400 text-sm">No results found</div>
                     )}
                 </div>
             )}

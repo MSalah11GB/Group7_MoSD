@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { assets } from '../assets/assets'
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { errorMessage } from '../utils/errors';
 
 const AddArtist = () => {
     const [image, setImage] = useState(false);
@@ -12,13 +14,17 @@ const AddArtist = () => {
 
     const onSubmitHandler = async (e) => {
         e.preventDefault();
+        if (!image) {
+            toast.error("Please select an image");
+            return;
+        }
         setLoading(true);
 
         try {
             const formData = new FormData();
 
             formData.append('name', name);
-            formData.append('image', image);
+            formData.append('imagePublicId', await uploadToCloudinary(image, 'image'));
             formData.append('bgColor', color);
 
             const response = await axios.post(`${url}/api/artist/add`, formData);
@@ -40,7 +46,7 @@ const AddArtist = () => {
             }
         } catch (error) {
             console.log(error);
-            toast.error("Error occurred")
+            toast.error(errorMessage(error));
         }
 
         setLoading(false);
