@@ -1,57 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
+import { useCatalogList } from '../hooks/useCatalog';
+import { errorMessage } from '../utils/errors';
 import { FaSearch, FaTrash, FaEdit } from 'react-icons/fa';
 
 const ListGenre = () => {
-    const [data, setData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const { data } = useCatalogList('genre');
 
-    const fetchGenres = async (search = '') => {
-        try {
-        const response = await axios.get(`${url}/api/genre/list`, {
-            params: { includeCounts: 'true', search }
-        });
-        if (response.data.success) {
-            setData(response.data.genres);
-        }
-        } catch (error) {
-        toast.error('Error occurred while fetching genres');
-        }
-    };
-
+    // The genre list is small, so it is filtered as you type instead of on submit.
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchGenres(searchTerm);
     };
 
     const removeGenre = async (id) => {
-        try {
         const genre = data.find(g => g._id === id);
 
         if (!window.confirm(`Are you sure you want to remove the genre "${genre.name}"? This will remove the genre from all songs but will not delete any songs.`)) {
             return;
         }
 
-        const response = await axios.post(`${url}/api/genre/remove`, { id });
+        try {
+            const response = await axios.post(`${url}/api/genre/remove`, { id });
 
-        if (response.data.success) {
-            toast.success(response.data.message);
-            await fetchGenres();
-        } else {
-            toast.error('Failed to remove genre');
-        }
+            if (response.data.success) {
+                toast.success(response.data.message);
+                await queryClient.invalidateQueries({ queryKey: ['genre'] });
+            } else {
+                toast.error('Failed to remove genre');
+            }
         } catch (error) {
-        toast.error('Error occurred while removing genre');
+            toast.error(errorMessage(error));
         }
     };
-
-    useEffect(() => {
-        fetchGenres();
-    }, []);
 
     const filteredData = data.filter(genre =>
         genre.name.toLowerCase().includes(searchTerm.toLowerCase())

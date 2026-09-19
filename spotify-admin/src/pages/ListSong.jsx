@@ -1,56 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
-import { assets } from '../assets/assets';
+import { useCatalogList } from '../hooks/useCatalog';
+import { errorMessage } from '../utils/errors';
 import { FaSearch, FaTrash, FaEdit } from 'react-icons/fa';
 
 const ListSong = () => {
-  const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const navigate = useNavigate();
-
-  const fetchSongs = async (search = '') => {
-    try {
-      const response = await axios.get(`${url}/api/song/list`, {
-        params: { search }
-      });
-
-      if (response.data.success) {
-        setData(response.data.songs)
-      }
-
-    } catch (error) {
-      toast.error("Error Occurred")
-    }
-  }
+  const queryClient = useQueryClient();
+  const { data } = useCatalogList('song', appliedSearch);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchSongs(searchTerm);
+    setAppliedSearch(searchTerm.trim());
   }
 
   const removeSong = async (id) => {
-    try {
-      if (!window.confirm("Are you sure you want to delete this song?")) {
-        return;
-      }
+    if (!window.confirm("Are you sure you want to delete this song?")) return;
 
+    try {
       const response = await axios.post(`${url}/api/song/remove`, {id});
 
       if (response.data.success) {
         toast.success(response.data.message);
-        await fetchSongs();
+        await queryClient.invalidateQueries({ queryKey: ['song'] });
       }
     } catch (error) {
-      toast.error("Error Occurred");
+      toast.error(errorMessage(error));
     }
   }
-
-  useEffect(() => {
-    fetchSongs();
-  },[])
 
   return (
     <div>

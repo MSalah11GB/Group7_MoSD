@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { assets } from '../assets/assets'
 import axios from 'axios';
-import { url } from '../App';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
 
 const AddGenre = () => {

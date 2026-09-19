@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { assets } from '../assets/assets'
 import axios from 'axios';
-import { url } from '../App';
+import { uploadToCloudinary } from '../utils/cloudinaryUpload';
+import { errorMessage } from '../utils/errors';
+import { url } from '../config/api';
 import { toast } from 'react-toastify';
 
 const EditArtist = () => {
@@ -83,7 +85,7 @@ const EditArtist = () => {
 
         // Only append image if a new one is selected
         if (image) {
-            formData.append('image', image);
+            formData.append('imagePublicId', await uploadToCloudinary(image, 'image'));
         }
 
         const response = await axios.post(`${url}/api/artist/update`, formData);
@@ -103,7 +105,7 @@ const EditArtist = () => {
         }
         } catch (error) {
         console.error("Error updating artist:", error);
-        toast.error("Error occurred");
+        toast.error(errorMessage(error));
         }
 
         setLoading(false);
