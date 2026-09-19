@@ -1,10 +1,12 @@
-import React, { useContext, useRef, useState, useCallback, useEffect } from 'react';
+import { useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { assets } from '../assets/assets'; 
 import { PlayerContext } from '../context/PlayerContext';
+import { usePlayerTime } from '../context/PlayerTimeContext';
+import { formatClock } from '../lib/catalog';
 
 const Player = () => {
 
-    const { track, seekBar, seekBg, play, pause, playStatus, time, 
+    const { track, seekBg, play, pause, playStatus,
         nextSong, previousSong, seekSong, loopMode, toggleLoopMode, LOOP_MODE, 
         shuffleMode, toggleShuffleMode, 
         volume, changeVolume, isMuted, toggleMute,
@@ -12,6 +14,7 @@ const Player = () => {
         showQueue, toggleQueue,
         toggleLyrics, currentLyrics, showLyrics 
     } = useContext(PlayerContext)
+    const { time, progress } = usePlayerTime()
 
     const getLoopIconStyle = () => {
         switch (loopMode) {
@@ -93,7 +96,7 @@ const Player = () => {
     const displayVolumePercentage = (isMuted ? 0 : volume) * 100;
 
     return track ? (
-        <div className='h-[10%] bg-black flex justify-between items-center text-white px-4'>
+        <footer className='h-[10%] bg-black flex justify-between items-center text-white px-4'>
             <div className='hidden lg:flex items-center gap-4'>
                 <img className='w-12' src={track.image} alt="song img" />
                 <div>
@@ -120,11 +123,11 @@ const Player = () => {
                     />
                 </div>
                 <div className='flex items-center gap-5'>
-                    <p className='w-8 text-center'>{time.currentTime.minute}:{time.currentTime.second < 10 ? `0${time.currentTime.second}` : time.currentTime.second}</p>
+                    <p className='w-8 text-center'>{formatClock(time.currentTime)}</p>
                     <div ref = {seekBg} onClick = {seekSong} className='w-[50vw] md:w-[60vw] max-w-[500px] bg-gray-300 rounded-full cursor-pointer'>
-                        <hr ref = {seekBar} className='h-1 border-none w-10 bg-green-800 rounded-full' />
+                        <hr style={{ width: `${progress}%` }} className='h-1 border-none bg-green-800 rounded-full' />
                     </div>
-                    <p className='w-8 text-center'>{time.totalTime.minute}:{time.totalTime.second < 10 ? `0${time.totalTime.second}` : time.totalTime.second}</p>
+                    <p className='w-8 text-center'>{formatClock(time.totalTime)}</p>
                 </div>
             </div>
 
@@ -173,7 +176,7 @@ const Player = () => {
                 style={showFullscreen ? { filter: 'invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(90%) contrast(95%)' } : {}}
             />
         </div>
-    </div>
+    </footer>
     ) : null
 };
 

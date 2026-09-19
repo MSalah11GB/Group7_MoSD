@@ -1,74 +1,51 @@
-import React, { useState, useContext, useEffect } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { PlaylistContext } from '../context/PlaylistContext';
-import { useUser } from '@clerk/clerk-react';
-//import { assets } from '../assets/assets';
+import { queryKeys } from '../api/queries';
+import { usePlaylist, playlistErrorMessage } from '../hooks/usePlaylist';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 
 const PlaylistManagement = ({ playlistId, onClose }) => {
-    const { user } = useUser();
-    const navigate = useNavigate();
-    const {
-        currentPlaylist,
-        loadPlaylist,
-        removeSongFromPlaylist,
-        setCurrentPlaylist,
-        deletePlaylist
-    } = useContext(PlaylistContext);
+    const { data: playlist, isLoading, error } = usePlaylist(playlistId);
 
-    const [songs, setSongs] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    if (isLoading || !playlist) {
+        return (
+        <div className="flex items-center justify-center p-4">
+            {error
+                ? <p className="text-red-400">{playlistErrorMessage(error)}</p>
+                : <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>}
+        </div>
+        );
+    }
+
+    // The form starts from the loaded playlist, so it is mounted only once the data is there.
+    return <ManagementPanel playlistId={playlistId} currentPlaylist={playlist} onClose={onClose} />;
+};
+
+const ManagementPanel = ({ playlistId, currentPlaylist, onClose }) => {
+    const navigate = useNavigate();
+    const { user } = useUser();
+    const queryClient = useQueryClient();
+    const { removeSongFromPlaylist, deletePlaylist } = useContext(PlaylistContext);
+
+    const songs = currentPlaylist.songs;
     const [error, setError] = useState('');
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [playlistDetails, setPlaylistDetails] = useState({
-        name: '',
-        description: '',
+        name: currentPlaylist.name || '',
+        description: currentPlaylist.description || '',
         image: null,
-        isPublic: true
+        isPublic: currentPlaylist.isPublic !== false // treat undefined as true
     });
     const [imagePreview, setImagePreview] = useState('');
 
-    useEffect(() => {
-        if (currentPlaylist && currentPlaylist.songs) {
-        setSongs(currentPlaylist.songs);
-        setPlaylistDetails({
-            name: currentPlaylist.name || '',
-            description: currentPlaylist.description || '',
-            image: null,
-            isPublic: currentPlaylist.isPublic !== false // treat undefined as true
-        });
-        setIsLoading(false);
-        } else {
-        loadPlaylistData();
-        }
-    }, [currentPlaylist, playlistId]);
-
-    const loadPlaylistData = async () => {
-        try {
-        setIsLoading(true);
-        setError('');
-        const result = await loadPlaylist(playlistId, user?.id || '');
-        if (result.success) {
-            setSongs(result.playlist.songs || []);
-            setPlaylistDetails({
-            name: result.playlist.name || '',
-            description: result.playlist.description || '',
-            image: null,
-            isPublic: result.playlist.isPublic !== false // treat undefined as true
-            });
-        } else {
-            setError(result.message || 'Failed to load playlist');
-        }
-        } catch (error) {
-        console.error('Error loading playlist:', error);
-        setError('An unexpected error occurred');
-        } finally {
-        setIsLoading(false);
-        }
-    };
+    const playlistKey = queryKeys.playlist(playlistId, user?.id);
+    const refreshPlaylist = () => queryClient.invalidateQueries({ queryKey: ['playlist', playlistId] });
 
     const handleDragEnd = async (result) => {
         if (!result.destination) return;
@@ -77,41 +54,21 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
 
-        setSongs(items);
+        // Show the new order immediately, then save it; if saving fails the server's order comes back.
+        queryClient.setQueryData(playlistKey, { ...currentPlaylist, songs: items });
 
-        // Update the playlist in the context
-        if (currentPlaylist) {
-        const updatedPlaylist = {
-            ...currentPlaylist,
-            songs: items
-        };
-        setCurrentPlaylist(updatedPlaylist);
-        }
-
-        // Save the new order to the backend
         try {
         await axios.post(`${API_BASE_URL}/api/playlist/reorder-songs`, {
             playlistId,
-            songIds: items.map(song => song._id),
-            clerkId: user?.id || ''
+            songIds: items.map(song => song._id)
         });
         } catch (error) {
         console.error('Error saving song order:', error);
-        // Revert to original order if save fails
-        loadPlaylistData();
+        refreshPlaylist();
         }
     };
 
-    const handleRemoveSong = async (songId) => {
-        try {
-        const result = await removeSongFromPlaylist(playlistId, songId, user?.id || '');
-        if (result.success) {
-            setSongs(songs.filter(song => song._id !== songId));
-        }
-        } catch (error) {
-        console.error('Error removing song:', error);
-        }
-    };
+    const handleRemoveSong = (songId) => removeSongFromPlaylist(playlistId, songId);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -147,7 +104,6 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         formData.append('name', playlistDetails.name);
         formData.append('description', playlistDetails.description);
         formData.append('isPublic', playlistDetails.isPublic);
-        formData.append('clerkId', user?.id || '');
 
         if (playlistDetails.image) {
             formData.append('image', playlistDetails.image);
@@ -160,8 +116,7 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         });
 
         if (response.data.success) {
-            // Reload playlist data
-            loadPlaylistData();
+            await Promise.all([refreshPlaylist(), queryClient.invalidateQueries({ queryKey: ['playlists'] })]);
             setShowEditModal(false);
         } else {
             setError(response.data.message || 'Failed to update playlist');
@@ -185,7 +140,7 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         navigate('/');
 
         // Fire-and-forget: Start the delete process in background without waiting
-        deletePlaylist(playlistId, user?.id || '').then(result => {
+        deletePlaylist(playlistId).then(result => {
         if (!result.success) {
             console.error('Delete failed:', result.message);
             // Show error notification (could add a toast notification here)
@@ -205,7 +160,6 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         const formData = new FormData();
         formData.append('name', `${playlistDetails.name} (Copy)`);
         formData.append('description', playlistDetails.description);
-        formData.append('clerkId', user?.id || '');
 
         const response = await axios.post(`${API_BASE_URL}/api/playlist/create`, formData);
 
@@ -216,12 +170,11 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
             for (const song of songs) {
             await axios.post(`${API_BASE_URL}/api/playlist/add-song`, {
                 playlistId: newPlaylistId,
-                songId: song._id,
-                clerkId: user?.id || ''
+                songId: song._id
             });
             }
 
-            // Navigate to the new playlist using React Router for instant navigation
+            queryClient.invalidateQueries({ queryKey: ['playlists'] });
             navigate(`/playlist/${newPlaylistId}`);
         } else {
             setError(response.data.message || 'Failed to duplicate playlist');
@@ -231,14 +184,6 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
         setError('An unexpected error occurred');
         }
     };
-
-    if (isLoading) {
-        return (
-        <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-        </div>
-        );
-    }
 
     return (
         <div className="text-white">
@@ -406,8 +351,8 @@ const PlaylistManagement = ({ playlistId, onClose }) => {
                     </label>
                     <p className="text-xs text-gray-400 mt-1 ml-6">
                     {playlistDetails.isPublic
-                        ? "Public playlists can be seen by everyone and anyone can add songs."
-                        : "Private playlists are only visible to you and only you can add songs."}
+                        ? "Public playlists can be seen by everyone."
+                        : "Private playlists are only visible to you."}
                     </p>
                 </div>
 

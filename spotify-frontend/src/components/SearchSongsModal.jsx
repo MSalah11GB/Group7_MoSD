@@ -1,78 +1,40 @@
-import React, { useContext, useState, useEffect } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { PlayerContext } from '../context/PlayerContext';
 import { useUser } from '@clerk/clerk-react';
-import { assets } from '../assets/assets';
+import { usePlaylist } from '../hooks/usePlaylist';
 import { PlaylistContext } from '../context/PlaylistContext';
+
+const RESULT_LIMIT = 20;
 
 const SearchSongsModal = ({ playlistId, onClose, onSongAdded }) => {
   const { songsData } = useContext(PlayerContext);
-  const { addSongToPlaylist, currentPlaylist} = useContext(PlaylistContext);
-  const { user, isSignedIn } = useUser();
+  const { addSongToPlaylist } = useContext(PlaylistContext);
+  const { data: currentPlaylist } = usePlaylist(playlistId);
+  const { isSignedIn } = useUser();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [submittedTerm, setSubmittedTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Load initial songs when component mounts and when songs data changes
-  useEffect(() => {
-    console.log("Loading initial songs...");
-    console.log("Total songs available:", songsData.length);
+  // Songs not already in the playlist, narrowed by the last submitted search (all of them when empty).
+  const searchResults = useMemo(() => {
+    const inPlaylist = new Set((currentPlaylist?.songs ?? []).map((song) => song._id));
+    const available = songsData.filter((song) => !inPlaylist.has(song._id));
 
-    // Get songs that are not already in the playlist
-    const playlistSongIds = currentPlaylist?.songs?.map(song => song._id) || [];
-    console.log("Current playlist has", playlistSongIds.length, "songs");
+    const term = submittedTerm.trim().toLowerCase();
+    if (!term) return available.slice(0, RESULT_LIMIT);
 
-    const filteredSongs = songsData.filter(song => !playlistSongIds.includes(song._id));
-    console.log("Found", filteredSongs.length, "songs not in the playlist");
+    return available.filter((song) =>
+      [song.name, song.artistName || song.artist, song.album].some((field) => (field || '').toLowerCase().includes(term))
+    );
+  }, [songsData, currentPlaylist, submittedTerm]);
 
-    // Show all available songs initially (limit to 20 for performance)
-    setSearchResults(filteredSongs.slice(0, 20));
-  }, [songsData, currentPlaylist]);
-
-
-
-  const handleSearch = async (e) => {
+  const handleSearch = (e) => {
     e?.preventDefault();
-
-    if (!searchTerm.trim()) {
-      // If search is cleared, reload initial results
-      const playlistSongIds = currentPlaylist?.songs?.map(song => song._id) || [];
-      const filteredSongs = songsData.filter(song => !playlistSongIds.includes(song._id));
-      setSearchResults(filteredSongs.slice(0, 20));
-      return;
-    }
-
-    setIsLoading(true);
     setError('');
-
-    try {
-      console.log("Searching for:", searchTerm);
-
-      // Filter songs locally based on search term
-      const playlistSongIds = currentPlaylist?.songs?.map(song => song._id) || [];
-      const filteredSongs = songsData.filter(song => {
-        // Don't include songs already in the playlist
-        if (playlistSongIds.includes(song._id)) return false;
-
-        // Search by song name, artist name, or album
-        const songName = (song.name || '').toLowerCase();
-        const artistName = (song.artistName || song.artist || '').toLowerCase();
-        const album = (song.album || '').toLowerCase();
-        const term = searchTerm.toLowerCase();
-
-        return songName.includes(term) || artistName.includes(term) || album.includes(term);
-      });
-
-      console.log("Search found", filteredSongs.length, "matching songs");
-      setSearchResults(filteredSongs);
-    } catch (error) {
-      console.error('Error searching songs:', error);
-      setError('An error occurred while searching for songs');
-    } finally {
-      setIsLoading(false);
-    }
+    setSubmittedTerm(searchTerm);
   };
 
   const handleAddSong = async (songId) => {
@@ -92,13 +54,10 @@ const SearchSongsModal = ({ playlistId, onClose, onSongAdded }) => {
     setSuccess('');
 
     try {
-      const result = await addSongToPlaylist(playlistId, songId, user.id);
+      const result = await addSongToPlaylist(playlistId, songId);
 
       if (result.success) {
         setSuccess('Song added to playlist successfully');
-
-        // Remove the added song from search results
-        setSearchResults(prev => prev.filter(song => song._id !== songId));
 
         // Notify parent component
         if (onSongAdded) {

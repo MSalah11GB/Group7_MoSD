@@ -1,206 +1,64 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useContext, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { PlayerContext } from '../context/PlayerContext';
 import { PlaylistContext } from '../context/PlaylistContext';
+import { usePlaylist, playlistErrorMessage } from '../hooks/usePlaylist';
 import { useUser } from '@clerk/clerk-react';
 import { assets } from '../assets/assets';
 import SearchSongsModal from './SearchSongsModal';
 import PlaylistManagement from './PlaylistManagement';
 
+const COLORS = [
+    'from-purple-800 to-purple-900',
+    'from-blue-800 to-blue-900',
+    'from-green-800 to-green-900',
+    'from-red-800 to-red-900',
+    'from-yellow-800 to-yellow-900',
+    'from-pink-800 to-pink-900',
+    'from-indigo-800 to-indigo-900',
+    'from-teal-800 to-teal-900',
+    'from-orange-800 to-orange-900',
+    'from-cyan-800 to-cyan-900',
+];
+
+// A stable gradient per playlist, picked from a hash of its name.
+const generatePlaylistColor = (playlistName) => {
+    if (!playlistName) return 'from-gray-800 to-gray-900';
+
+    let hash = 0;
+    for (let i = 0; i < playlistName.length; i++) {
+        hash = playlistName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return COLORS[Math.abs(hash) % COLORS.length];
+};
+
 const DisplayPlaylist = () => {
     const { id } = useParams();
     const { user } = useUser();
-    const navigate = useNavigate();
     const { playWithId, playStatus, play, pause, track } = useContext(PlayerContext);
-    const { loadPlaylist, currentPlaylist, removeSongFromPlaylist, playPlaylist } = useContext(PlaylistContext);
+    const { removeSongFromPlaylist, playPlaylist } = useContext(PlaylistContext);
+    const { data: currentPlaylist, isLoading, error: queryError } = usePlaylist(id);
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [isOwner, setIsOwner] = useState(false);
     const [showAddSongsModal, setShowAddSongsModal] = useState(false);
     const [showManagePlaylist, setShowManagePlaylist] = useState(false);
-    const [isRequestInProgress, setIsRequestInProgress] = useState(false);
 
-    // Generate dynamic background color based on playlist name
-    const generatePlaylistColor = (playlistName) => {
-        if (!playlistName) return 'from-gray-800 to-gray-900';
-
-        const colors = [
-        'from-purple-800 to-purple-900',
-        'from-blue-800 to-blue-900',
-        'from-green-800 to-green-900',
-        'from-red-800 to-red-900',
-        'from-yellow-800 to-yellow-900',
-        'from-pink-800 to-pink-900',
-        'from-indigo-800 to-indigo-900',
-        'from-teal-800 to-teal-900',
-        'from-orange-800 to-orange-900',
-        'from-cyan-800 to-cyan-900'
-        ];
-
-        // Create a simple hash from the playlist name
-        let hash = 0;
-        for (let i = 0; i < playlistName.length; i++) {
-        hash = playlistName.charCodeAt(i) + ((hash << 5) - hash);
-        }
-
-        // Use the hash to select a color
-        const colorIndex = Math.abs(hash) % colors.length;
-        return colors[colorIndex];
-    };
-
-    useEffect(() => {
-        let isMounted = true; // Flag to prevent state updates after unmount
-        let timeoutId = null;
-
-        const fetchPlaylist = async () => {
-        if (!isMounted || isRequestInProgress) return;
-
-       // console.log(`[DisplayPlaylist] Starting to fetch playlist with ID: ${id}`);
-        setIsRequestInProgress(true);
-        setIsLoading(true);
-        setError('');
-
-        // Set a timeout to prevent infinite loading
-        timeoutId = setTimeout(() => {
-            if (isMounted) {
-            console.error('[DisplayPlaylist] Request timed out');
-            setError('Request timed out. Please try again.');
-            setIsLoading(false);
-            setIsRequestInProgress(false);
-            }
-        }, 10000); // 10 second timeout
-
-        try {
-            if (!id) {
-                console.error('[DisplayPlaylist] No playlist ID provided');
-                setError('Invalid playlist ID');
-                setIsLoading(false);
-                return;
-            }
-
-            const clerkId = user?.id || '';
-            //console.log(`[DisplayPlaylist] Fetching playlist with ID: ${id}, clerkId: ${clerkId}`);
-
-            const result = await loadPlaylist(id, clerkId);
-            //console.log(`[DisplayPlaylist] Load playlist result:`, result);
-
-            // Clear timeout since we got a response
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-
-            if (!isMounted) {
-                console.log('[DisplayPlaylist] Component unmounted, skipping state update');
-                return; // Check if component is still mounted
-            }
-
-            if (!result.success) {
-                console.error('[DisplayPlaylist] Failed to load playlist:', result.message);
-                setError(result.message || 'Failed to load playlist');
-            } else {
-            console.log('[DisplayPlaylist] Playlist loaded successfully:', result.playlist);
-
-            // Verify that songs are properly populated
-            if (!result.playlist.songs) {
-                console.error('[DisplayPlaylist] Playlist songs array is undefined');
-                setError('Playlist data is incomplete');
-                return;
-            }
-
-            // Check if the current user is the owner of the playlist
-            if (result.playlist.creator && user) {
-                const isOwnerCheck = result.playlist.creator._id === user.id ||
-                (result.playlist.creator.clerkId && result.playlist.creator.clerkId === user.id);
-                console.log(`[DisplayPlaylist] Owner check: ${isOwnerCheck}`);
-                setIsOwner(isOwnerCheck);
-            }
-            }
-        } catch (error) {
-            if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-            }
-            if (!isMounted) return;
-            console.error('[DisplayPlaylist] Error loading playlist:', error);
-            setError(`An unexpected error occurred: ${error.message}`);
-        } finally {
-            if (isMounted) {
-            console.log('[DisplayPlaylist] Setting loading to false');
-            setIsLoading(false);
-            setIsRequestInProgress(false);
-            }
-        }
-        };
-
-        // Fetch playlist immediately
-        fetchPlaylist();
-
-        // Cleanup function to reset state when component unmounts or ID changes
-        return () => {
-            isMounted = false; // Mark as unmounted
-            if (timeoutId) clearTimeout(timeoutId);
-            console.log('[DisplayPlaylist] Component cleanup');
-        };
-    }, [id]);
+    const error = playlistErrorMessage(queryError);
+    const isOwner = Boolean(user && currentPlaylist?.creator?.clerkId === user.id);
 
     const handlePlayAll = () => {
-        if (currentPlaylist && currentPlaylist.songs && currentPlaylist.songs.length > 0) {
-        console.log(`Playing all songs from playlist: ${currentPlaylist._id}`);
-        playPlaylist(currentPlaylist._id, user?.id || '')
-            .then(result => {
-            if (!result.success) {
-                console.error(`Failed to play playlist: ${result.message}`);
-            }
-            })
-            .catch(error => {
-            console.error('Error playing playlist:', error);
-            });
-        } else {
-        console.log('Cannot play playlist: No songs available');
-        }
+        if (currentPlaylist?.songs?.length > 0) playPlaylist(currentPlaylist._id);
     };
 
     const handlePlayPause = () => {
-        if (!currentPlaylist || !currentPlaylist.songs) {
-        console.error('Cannot play/pause: Playlist data is incomplete');
-        return;
-        }
+        if (!currentPlaylist?.songs) return;
 
-        if (playStatus) {
-        console.log('Pausing playback');
-        pause();
-        } else if (track && currentPlaylist.songs.some(song => song._id === track._id)) {
-        console.log('Resuming playback of current track');
-        play();
-        } else {
-        console.log('Starting playlist playback');
-        handlePlayAll();
-        }
+        if (playStatus) pause();
+        else if (track && currentPlaylist.songs.some((song) => song._id === track._id)) play();
+        else handlePlayAll();
     };
 
-    const handlePlaySong = (songId) => {
-        if (!currentPlaylist || !songId) {
-        console.error('Cannot play song: Invalid data');
-        return;
-        }
-
-        console.log(`Playing song ${songId} from playlist ${currentPlaylist._id}`);
-        playWithId(songId);
-    };
-
-    const handleRemoveSong = async (songId) => {
-        if (!user || !isOwner || !currentPlaylist) return;
-
-        try {
-        const result = await removeSongFromPlaylist(currentPlaylist._id, songId, user.id);
-        if (!result.success) {
-            console.error('Failed to remove song:', result.message);
-        }
-        } catch (error) {
-        console.error('Error removing song:', error);
-        }
+    const handleRemoveSong = (songId) => {
+        if (user && isOwner && currentPlaylist) removeSongFromPlaylist(currentPlaylist._id, songId);
     };
 
     if (isLoading) {
@@ -208,7 +66,6 @@ const DisplayPlaylist = () => {
         <div className="h-full w-full flex flex-col items-center justify-center text-white">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
             <p className="text-lg">Loading playlist...</p>
-            <p className="text-gray-400 text-sm mt-2">Playlist ID: {id}</p>
         </div>
         );
     }
@@ -220,7 +77,6 @@ const DisplayPlaylist = () => {
             <h2 className="text-2xl font-bold mb-4">Playlist Not Found</h2>
             <p className="text-gray-400 mb-2">Error: {error}</p>
             <p className="text-gray-400 mb-6">The playlist might be private, deleted, or doesn't exist.</p>
-            <p className="text-sm text-gray-500 mb-6">Playlist ID: {id}</p>
             <button
                 onClick={() => window.history.back()}
                 className="px-6 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition-transform"
@@ -388,10 +244,6 @@ const DisplayPlaylist = () => {
             <SearchSongsModal
             playlistId={currentPlaylist._id}
             onClose={() => setShowAddSongsModal(false)}
-            onSongAdded={() => {
-                // The playlist will be automatically updated by the context
-                console.log('Song added to playlist');
-            }}
             />
         )}
 

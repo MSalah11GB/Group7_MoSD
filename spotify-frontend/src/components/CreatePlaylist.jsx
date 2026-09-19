@@ -50,8 +50,7 @@ const CreatePlaylist = ({ onClose, onPlaylistCreated }) => {
                 {
                 name,
                 description,
-                isPublic,
-                clerkId: user.id
+                isPublic
                 },
             imageFile
         );
