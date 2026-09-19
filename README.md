@@ -25,7 +25,7 @@ The application is built using a modern **JavaScript** stack, ensuring performan
 * **Runtime:** Node.js with Express.js for handling RESTful API routes.
 * **Database:** MongoDB (via Mongoose) for storing metadata on users, songs, albums, and playlists.
 * **Media Storage:** Cloudinary for efficient cloud storage and retrieval of image and audio assets.
-* **External Integration:** Integration with external APIs and libraries (such as `youtube-sr`) for metadata fetching and search capabilities.
+* **External Integration:** Spotify Web API (metadata lookup only) to pre-fill song details in the admin panel.
 
 ## 4. MAIN FEATURE GROUPS
 
@@ -66,3 +66,63 @@ The application is built using a modern **JavaScript** stack, ensuring performan
 | 12 | Nguyễn Long Vũ | vu.nl226006@sis.hust.edu.vn |
 | 13 | Bùi Xuân Sơn | son.bx226065@sis.hust.edu.vn |
 
+
+## 7. GETTING STARTED
+
+The repository contains three independent apps, each with its own `package.json` and `node_modules`: `spotify-backend` (API), `spotify-frontend` (user site) and `spotify-admin` (admin panel). Requires Node.js 22+.
+
+```bash
+# once per app
+(cd spotify-backend && npm install)
+(cd spotify-frontend && npm install)
+(cd spotify-admin && npm install)
+
+node start.js        # runs all three: API on :4000, user site on :5173, admin panel on :5174
+```
+
+Or run them separately with `npm run dev` inside each folder. Other commands, run inside the app folder:
+
+```bash
+npm test             # tests (backend tests start an in-memory MongoDB)
+npm run lint         # ESLint (user site and admin)
+npm run typecheck    # backend only
+npm run build        # production build
+npm run test:e2e     # user site only: real-browser smoke tests (Playwright; first run: npx playwright install chromium)
+```
+
+### Configuration
+Copy each `.env.example` to `.env` and fill it in:
+
+| App | File | Notes |
+| :--- | :--- | :--- |
+| Backend | `spotify-backend/.env` | MongoDB, Clerk secret + publishable key, Cloudinary, optional Spotify keys, `CORS_ORIGINS` |
+| User site | `spotify-frontend/.env` | `VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY` |
+| Admin panel | `spotify-admin/.env` | `VITE_API_BASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY` |
+
+### Authentication and admin access
+* The apps send the Clerk session token as `Authorization: Bearer <token>`; the API derives the user from that token only and ignores any user id in request bodies.
+* Public: browsing songs, albums, artists, genres and public playlists.
+* Signed-in users: create playlists and edit **their own** playlists.
+* Admins only: every add / update / remove route for songs, albums, artists and genres, and `/api/db/*`.
+* To make someone an admin, either set `{ "role": "admin" }` in their Clerk **public metadata**, or add their Clerk user id to `ADMIN_USER_IDS` in `spotify-backend/.env`.
+
+### Uploads
+* The admin panel uploads songs, lyrics, album art and artist photos **directly from the browser to Cloudinary** using a short-lived signature from `POST /api/uploads/sign` (admin only). The API then asks Cloudinary whether the upload exists, reads the URL and duration from Cloudinary itself, and saves that. Large audio files never pass through the API.
+* Playlist cover images (uploaded by regular users) still go through the API and are limited to `MAX_UPLOAD_MB` (default 5).
+* Deleting or replacing a song also deletes its audio and lyrics files from Cloudinary.
+* Songs are no longer downloaded from YouTube. The Spotify URL field only pre-fills the song name, artists and cover; you always upload the audio file yourself.
+
+### API notes
+* `song.album` in API responses is the album's **name**, but the database stores a reference (`albumId`), so renaming an album updates all its songs.
+* Genre `songCount` / `songList`, artist `genres` and playlist `songCount` are computed when read, not stored.
+* List endpoints (`/api/song|album|artist|playlist/list`) return everything by default. Add `?page=1&limit=20` (limit up to 100) to get a page plus a `pagination` object.
+
+### Upgrading an existing database
+Data created before the schema change needs a one-off migration (the API logs a warning at startup until it is done):
+
+```bash
+cd spotify-backend
+npm run migrate:normalize              # dry run: only reports what would change
+npm run migrate:normalize -- --apply   # back up the database first, then apply
+```
+It is safe to run more than once.
